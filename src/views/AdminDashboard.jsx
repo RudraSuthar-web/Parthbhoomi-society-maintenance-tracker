@@ -300,6 +300,7 @@ export default function AdminDashboard({ currentTab }) {
                 onChange={(e) => setNewTenementNumber(e.target.value)}
                 className="w-full px-3 py-1.5 border border-outline-variant bg-white text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
               />
+            </div>
 
             <div>
               <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
