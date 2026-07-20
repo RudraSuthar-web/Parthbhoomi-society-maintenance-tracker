@@ -1,36 +1,37 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
+import { CURRENT_YEAR } from '../utils/dateUtils';
 
 export default function Login({ navigate }) {
   const { login, registerTenement, user } = useContext(AppContext);
-  
-  // Tab toggle state: 'signin' or 'register'
-  const [activeTab, setActiveTab] = useState('signin');
-  
-  // Sign In state
+
+  const [activeTab, setActiveTab]   = useState('signin');
+
+  // Sign In
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Register state
-  const [regUnit, setRegUnit] = useState('');
-  const [regContact, setRegContact] = useState('');
-  const [regPassword, setRegPassword] = useState('');
+  const [showSignInPw, setShowSignInPw] = useState(false);
+
+  // Register
+  const [regUnit, setRegUnit]                   = useState('');
+  const [regContact, setRegContact]             = useState('');
+  const [regPassword, setRegPassword]           = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
-  
-  const [errorMsg, setErrorMsg] = useState('');
+  const [showRegPw, setShowRegPw]               = useState(false);
+  const [showRegConfirmPw, setShowRegConfirmPw] = useState(false);
+
+  const [errorMsg, setErrorMsg]     = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If user is already logged in, redirect immediately
+  // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin') {
-        navigate('overview');
-      } else {
-        navigate('dashboard');
-      }
+      navigate(user.role === 'admin' ? 'overview' : 'dashboard');
     }
   }, [user, navigate]);
+
+  const clearMessages = () => { setErrorMsg(''); setSuccessMsg(''); };
 
   const handleSignIn = (e) => {
     e.preventDefault();
@@ -38,37 +39,30 @@ export default function Login({ navigate }) {
       setErrorMsg('Please enter both Tenement/Admin ID and password.');
       return;
     }
-
     setIsSubmitting(true);
-    setErrorMsg('');
-    setSuccessMsg('');
+    clearMessages();
 
+    // Slight delay for UX (simulate network)
     setTimeout(() => {
       const result = login(username, password);
       setIsSubmitting(false);
       if (result.success) {
-        if (result.user.role === 'admin') {
-          navigate('overview');
-        } else {
-          navigate('dashboard');
-        }
+        navigate(result.user.role === 'admin' ? 'overview' : 'dashboard');
       } else {
         setErrorMsg(result.message);
       }
-    }, 400);
+    }, 350);
   };
 
   const handleRegister = (e) => {
     e.preventDefault();
     if (!regUnit.trim() || !regContact.trim() || !regPassword || !regConfirmPassword) {
-      setErrorMsg('Please fill in all the registration fields.');
+      setErrorMsg('Please fill in all registration fields.');
       return;
     }
-
-    // Format check (1-60 digits only)
     const trimmed = regUnit.trim();
     if (!/^\d+$/.test(trimmed)) {
-      setErrorMsg('Tenement number must contain digits only (no characters).');
+      setErrorMsg('Tenement number must be numeric only (e.g. 42).');
       return;
     }
     const num = parseInt(trimmed, 10);
@@ -76,281 +70,320 @@ export default function Login({ navigate }) {
       setErrorMsg('Tenement number must be between 1 and 60.');
       return;
     }
-
+    if (regContact.trim().length < 10) {
+      setErrorMsg('Please enter a valid contact number (min. 10 digits).');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setErrorMsg('Password must be at least 6 characters.');
+      return;
+    }
     if (regPassword !== regConfirmPassword) {
       setErrorMsg('Passwords do not match.');
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMsg('');
-    setSuccessMsg('');
+    clearMessages();
 
     setTimeout(() => {
       const result = registerTenement(regUnit, regContact, regPassword);
       setIsSubmitting(false);
-      
       if (result.success) {
-        setSuccessMsg('Registration successful! Logging you in...');
-        
-        // Clear inputs
-        setRegUnit('');
-        setRegContact('');
-        setRegPassword('');
-        setRegConfirmPassword('');
-        
-        setTimeout(() => {
-          navigate('dashboard');
-        }, 1000);
+        setSuccessMsg('Registration successful! Signing you in…');
+        setTimeout(() => navigate('dashboard'), 900);
       } else {
         setErrorMsg(result.message);
       }
-    }, 500);
+    }, 400);
   };
 
   const setDemoCredentials = (u, p) => {
     setActiveTab('signin');
     setUsername(u);
     setPassword(p);
-    setErrorMsg('');
-    setSuccessMsg('');
+    clearMessages();
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4">
-      {/* Brand logo container */}
-      <div className="flex flex-col items-center mb-6 text-center max-w-sm">
-        <div className="w-16 h-16 rounded-lg bg-primary text-white flex items-center justify-center mb-3 shadow-soft">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex flex-col justify-center items-center p-4">
+      
+      {/* Brand */}
+      <div className="flex flex-col items-center mb-7 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center mb-4 shadow-lg">
           <span className="material-symbols-outlined text-4xl">domain</span>
         </div>
-        <h1 className="font-display-lg text-on-surface font-extrabold tracking-tight m-0 leading-none">
+        <h1 className="font-display-lg text-on-surface font-extrabold tracking-tight leading-none">
           Parthbhoomi
         </h1>
-        <p className="font-body-md text-on-surface-variant font-medium mt-1">
-          Society Maintenance Ledger & Record Tracker
+        <p className="text-sm text-on-surface-variant font-medium mt-2">
+          Co-operative Housing Society · Maintenance Ledger
         </p>
       </div>
 
-      {/* Main card */}
-      <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-soft max-w-md w-full overflow-hidden">
-        {/* Toggle tabs */}
-        <div className="flex border-b border-[#E2E8F0] bg-surface-container bg-opacity-40">
-          <button
-            onClick={() => {
-              setActiveTab('signin');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider text-center transition-all ${
-              activeTab === 'signin'
-                ? 'bg-white border-b-2 border-primary text-primary'
-                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high bg-opacity-20'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('register');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider text-center transition-all ${
-              activeTab === 'register'
-                ? 'bg-white border-b-2 border-primary text-primary'
-                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high bg-opacity-20'
-            }`}
-          >
-            Register Unit
-          </button>
+      {/* Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden">
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200">
+          {['signin'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); clearMessages(); }}
+              className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider text-center transition-all ${
+                activeTab === tab
+                  ? 'bg-white border-b-2 border-primary text-primary'
+                  : 'text-on-surface-variant hover:text-on-surface bg-slate-50 hover:bg-white'
+              }`}
+            >
+              {tab = 'Sign In'}
+            </button>
+          ))}
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
+          {/* Error / Success alerts */}
           {errorMsg && (
-            <div className="bg-error-container text-error text-xs font-semibold p-3.5 rounded border border-transparent flex items-start space-x-2">
-              <span className="material-symbols-outlined text-base mt-0.5">error</span>
+            <div className="bg-red-50 border border-red-200 text-error text-xs font-semibold p-3.5 rounded-xl flex items-start gap-2 animate-fadeIn">
+              <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">error</span>
               <span>{errorMsg}</span>
             </div>
           )}
-
           {successMsg && (
-            <div className="bg-success-container text-success text-xs font-semibold p-3.5 rounded border border-transparent flex items-start space-x-2">
-              <span className="material-symbols-outlined text-base mt-0.5">check_circle</span>
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3.5 rounded-xl flex items-start gap-2 animate-fadeIn">
+              <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">check_circle</span>
               <span>{successMsg}</span>
             </div>
           )}
 
-          {/* SIGN IN FORM */}
+          {/* ── SIGN IN FORM ── */}
           {activeTab === 'signin' && (
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignIn} className="space-y-4 animate-fadeIn" noValidate>
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
                   Tenement Number / Admin ID
                 </label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-lg">
-                    key
-                  </span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">badge</span>
                   <input
                     type="text"
+                    autoComplete="username"
                     placeholder="e.g. 42 or ADMIN-01"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-outline-variant bg-surface text-on-surface rounded text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-semibold"
+                    onChange={(e) => { setUsername(e.target.value); setErrorMsg(''); }}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-semibold"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
                   Password
                 </label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-lg">
-                    lock
-                  </span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">lock</span>
                   <input
-                    type="password"
+                    type={showSignInPw ? 'text' : 'password'}
+                    autoComplete="current-password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-outline-variant bg-surface text-on-surface rounded text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-semibold"
+                    onChange={(e) => { setPassword(e.target.value); setErrorMsg(''); }}
+                    className="w-full pl-10 pr-10 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-semibold"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignInPw(!showSignInPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+                    tabIndex={-1}
+                  >
+                    <span className="material-symbols-outlined text-lg">
+                      {showSignInPw ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 bg-primary text-white rounded text-sm font-bold shadow-soft hover:bg-primary-container flex items-center justify-center space-x-1.5 transition-all duration-200 active-scale disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-soft hover:bg-primary-container flex items-center justify-center gap-2 transition-all active-scale disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 {isSubmitting ? (
-                  <span>Signing In...</span>
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Signing in…
+                  </>
                 ) : (
                   <>
-                    <span>Sign In Securely</span>
-                    <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+                    Sign In Securely
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </>
                 )}
               </button>
             </form>
           )}
 
-          {/* REGISTER TENEMENT FORM */}
+          {/* ── REGISTER FORM ──
           {activeTab === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-4 animate-fadeIn">
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                  Tenement Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 42 (Number between 1-60)"
-                  value={regUnit}
-                  onChange={(e) => setRegUnit(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                  Contact Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. +91 99887 76655"
-                  value={regContact}
-                  onChange={(e) => setRegContact(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-                />
+            <form onSubmit={handleRegister} className="space-y-4 animate-fadeIn" noValidate>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                    Tenement Number <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 42 (1–60)"
+                    value={regUnit}
+                    onChange={(e) => { setRegUnit(e.target.value); setErrorMsg(''); }}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                    Contact Number <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+91 99887 76655"
+                    value={regContact}
+                    onChange={(e) => { setRegContact(e.target.value); setErrorMsg(''); }}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                    Password
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                    Password <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showRegPw ? 'text' : 'password'}
+                      placeholder="Min. 6 characters"
+                      autoComplete="new-password"
+                      value={regPassword}
+                      onChange={(e) => { setRegPassword(e.target.value); setErrorMsg(''); }}
+                      className="w-full pl-3.5 pr-9 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPw(!showRegPw)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                      tabIndex={-1}
+                    >
+                      <span className="material-symbols-outlined text-base">{showRegPw ? 'visibility_off' : 'visibility'}</span>
+                    </button>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                    Confirm Password
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                    Confirm Password <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={regConfirmPassword}
-                    onChange={(e) => setRegConfirmPassword(e.target.value)}
-                    className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showRegConfirmPw ? 'text' : 'password'}
+                      placeholder="Repeat password"
+                      autoComplete="new-password"
+                      value={regConfirmPassword}
+                      onChange={(e) => { setRegConfirmPassword(e.target.value); setErrorMsg(''); }}
+                      className={`w-full pl-3.5 pr-9 py-2.5 border rounded-xl text-xs font-semibold focus:outline-none focus:bg-white transition-all ${
+                        regConfirmPassword && regPassword !== regConfirmPassword
+                          ? 'border-red-300 bg-red-50 focus:border-red-400'
+                          : 'border-slate-200 bg-slate-50 focus:border-primary'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegConfirmPw(!showRegConfirmPw)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                      tabIndex={-1}
+                    >
+                      <span className="material-symbols-outlined text-base">{showRegConfirmPw ? 'visibility_off' : 'visibility'}</span>
+                    </button>
+                  </div>
+                  {regConfirmPassword && regPassword !== regConfirmPassword && (
+                    <p className="text-[10px] text-error font-semibold mt-1">Passwords don't match</p>
+                  )}
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 bg-primary text-white rounded text-sm font-bold shadow-soft hover:bg-primary-container flex items-center justify-center space-x-1.5 transition-all duration-200 active-scale disabled:opacity-50"
+                className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-soft hover:bg-primary-container flex items-center justify-center gap-2 transition-all active-scale disabled:opacity-50 disabled:pointer-events-none"
               >
                 {isSubmitting ? (
-                  <span>Registering Unit...</span>
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Registering Unit…
+                  </>
                 ) : (
                   <>
-                    <span>Register and Sign In</span>
-                    <span className="material-symbols-outlined text-sm font-bold">app_registration</span>
+                    Register & Sign In
+                    <span className="material-symbols-outlined text-sm">app_registration</span>
                   </>
                 )}
               </button>
             </form>
-          )}
+          )} */}
 
-          {/* Demo profiles help drawer */}
-          <div className="pt-4 border-t border-[#E2E8F0] space-y-2">
-            <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-              Demo Presets for Testing:
+          {/* Demo presets */}
+          <div className="pt-4 border-t border-slate-100 space-y-2">
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+              Demo Access
             </p>
             <div className="grid grid-cols-1 gap-2">
-              <button
-                onClick={() => setDemoCredentials('42', 'password')}
-                className="flex items-center justify-between text-left p-2.5 bg-surface hover:bg-surface-container-high rounded border border-[#E2E8F0] text-xs font-semibold text-on-surface transition-all active-scale"
-              >
-                <div className="flex items-center space-x-2">
-                  <span className="material-symbols-outlined text-sm text-error">warning</span>
-                  <div>
-                    <p className="font-bold text-on-surface">Unit 42 (Rohan)</p>
-                    <p className="text-[10px] text-on-surface-variant">Resident (Unpaid State)</p>
+              {[
+                {
+                  id: 'unit42',
+                  label: 'Unit 42 — Rohan Mehta',
+                  sub: 'Resident · Unpaid state',
+                  icon: 'home',
+                  iconColor: 'text-amber-500',
+                  u: '42',
+                  p: 'password',
+                },
+                {
+                  id: 'admin01',
+                  label: 'ADMIN-01 — Treasurer',
+                  sub: 'Administrator Dashboard',
+                  icon: 'shield_person',
+                  iconColor: 'text-primary',
+                  u: 'ADMIN-01',
+                  p: 'password',
+                },
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  id={preset.id}
+                  onClick={() => setDemoCredentials(preset.u, preset.p)}
+                  className="flex items-center justify-between text-left p-3 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 rounded-xl border border-slate-200 transition-all active-scale group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={`material-symbols-outlined text-lg ${preset.iconColor}`}>{preset.icon}</span>
+                    <div>
+                      <p className="text-xs font-bold text-on-surface">{preset.label}</p>
+                      <p className="text-[10px] text-on-surface-variant">{preset.sub}</p>
+                    </div>
                   </div>
-                </div>
-                <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-outline-variant">Use Preset</span>
-              </button>
-
-              <button
-                onClick={() => setDemoCredentials('ADMIN-01', 'password')}
-                className="flex items-center justify-between text-left p-2.5 bg-surface hover:bg-surface-container-high rounded border border-[#E2E8F0] text-xs font-semibold text-on-surface transition-all active-scale"
-              >
-                <div className="flex items-center space-x-2">
-                  <span className="material-symbols-outlined text-sm text-primary">shield_person</span>
-                  <div>
-                    <p className="font-bold text-on-surface">ADMIN-01 (Treasurer)</p>
-                    <p className="text-[10px] text-on-surface-variant">Admin Dashboard</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-outline-variant">Use Preset</span>
-              </button>
+                  <span className="text-[10px] font-bold bg-white border border-slate-200 text-primary group-hover:bg-primary group-hover:text-white group-hover:border-primary px-2.5 py-1 rounded-lg transition-all">
+                    Use Preset
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Notice info */}
+
+      {/* Footer */}
       <p className="text-[11px] text-on-surface-variant font-medium mt-6 max-w-xs text-center leading-relaxed">
-        * No real payment information or gateway details are used. Default demo password is "<span className="font-bold font-mono">password</span>".
+        Demo system. No real payments processed. Default password:{' '}
+        <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">password</code>
       </p>
+      <p className="text-[10px] text-slate-400 mt-2">© {CURRENT_YEAR} Parthbhoomi CHS · All rights reserved</p>
     </div>
   );
 }

@@ -1,88 +1,90 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import ReceiptModal from '../components/ReceiptModal';
+import TenementModal from '../components/TenementModal';
+import MonthlyGridView from './MonthlyGridView';
+import { CURRENT_MONTH, CURRENT_YEAR, DUES_AMOUNT, severityStyle } from '../utils/dateUtils';
 
 export default function AdminDashboard({ currentTab }) {
   const { tenements, notices, togglePaymentStatus, addNotice, deleteNotice, registerTenement } = useContext(AppContext);
-  const [selectedTenementNumber, setSelectedTenementNumber] = useState(null);
-  
-  // Notice Broadcaster form state
+
+  // ── Modal state ────────────────────────────────────────────────────────────
+  // Single selected tenement number — drives TenementModal from any location
+  const [activeTenementNum, setActiveTenementNum] = useState(null);
+  const activeTenement = tenements.find(t => t.tenementNumber === activeTenementNum) ?? null;
+
+  const openTenement = useCallback((num) => setActiveTenementNum(num), []);
+  const closeTenement = useCallback(() => setActiveTenementNum(null), []);
+
+  // Notice Broadcaster
+  const [isPublishNoticeOpen, setIsPublishNoticeOpen] = useState(false);
+  const [selectedNotice, setSelectedNotice] = useState(null);
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeSeverity, setNoticeSeverity] = useState('info');
   const [noticeSuccessMsg, setNoticeSuccessMsg] = useState('');
 
-  // Admin Register Tenement form state
+  // Admin Register Tenement
   const [isAddingTenement, setIsAddingTenement] = useState(false);
   const [newTenementNumber, setNewTenementNumber] = useState('');
   const [newContact, setNewContact] = useState('');
-  const [newPassword, setNewPassword] = useState('password');
+  const [newPassword, setNewPassword] = useState('');
   const [adminRegError, setAdminRegError] = useState('');
   const [adminRegSuccess, setAdminRegSuccess] = useState('');
 
-  // Payment Method selection modal/popover state
-  const [paymentToggleState, setPaymentToggleState] = useState(null); // { tenementNumber, month }
+  // Payment method modal (inside TenementModal flow)
+  const [paymentToggleState, setPaymentToggleState] = useState(null);
 
-  // Printable receipt overlay state
+  // Receipt modal
   const [receiptData, setReceiptData] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
-  // Search/Filter state for Tenement directory
+  // Tenement search (directory tab)
   const [searchQuery, setSearchQuery] = useState('');
 
-  const currentMonth = 'July';
-  const duesAmount = 1200;
-
-  // Calculators
+  // ── Computed stats ──────────────────────────────────────────────────────────
   const totalTenementsCount = tenements.length;
-  
-  // July Stats
-  const julyPaidTenements = tenements.filter(t => {
-    const julyDue = t.dues.find(d => d.month === currentMonth);
-    return julyDue?.status === 'Paid';
-  });
 
-  const julyUnpaidTenements = tenements.filter(t => {
-    const julyDue = t.dues.find(d => d.month === currentMonth);
-    return julyDue?.status === 'Unpaid';
-  });
+  const currentMonthPaid = tenements.filter(t =>
+    t.dues.find(d => d.month === CURRENT_MONTH)?.status === 'Paid'
+  );
+  const currentMonthUnpaid = tenements.filter(t =>
+    t.dues.find(d => d.month === CURRENT_MONTH)?.status === 'Unpaid'
+  );
 
-  const totalCollectedThisMonth = julyPaidTenements.length * duesAmount;
-  const totalPendingThisMonth = julyUnpaidTenements.length * duesAmount;
+  const totalCollectedThisMonth = currentMonthPaid.length * DUES_AMOUNT;
+  const totalPendingThisMonth = currentMonthUnpaid.length * DUES_AMOUNT;
+  const collectionRate = totalTenementsCount > 0
+    ? ((currentMonthPaid.length / totalTenementsCount) * 100).toFixed(0)
+    : '0';
 
-  // Defaulters for July
-  const defaulters = julyUnpaidTenements.map(t => ({
-    tenementNumber: t.tenementNumber,
-    ownerName: t.ownerName,
-    contact: t.contact
-  }));
+  // Defaulters = unpaid this month (full tenement objects)
+  const defaulterTenements = currentMonthUnpaid;
 
-  // Handle notice broadcast submission
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleBroadcastNotice = (e) => {
     e.preventDefault();
-    if (!noticeTitle.trim() || !noticeContent.trim()) {
-      alert('Please fill out notice title and content.');
-      return;
-    }
+    if (!noticeTitle.trim() || !noticeContent.trim()) return;
     addNotice(noticeTitle, noticeContent, noticeSeverity);
     setNoticeTitle('');
     setNoticeContent('');
     setNoticeSeverity('info');
     setNoticeSuccessMsg('Notice broadcasted successfully!');
-    setTimeout(() => setNoticeSuccessMsg(''), 3000);
+    setTimeout(() => {
+      setNoticeSuccessMsg('');
+      setIsPublishNoticeOpen(false);
+    }, 2000);
   };
 
-  // Handle registering new tenement from admin
   const handleAdminRegisterTenement = (e) => {
     e.preventDefault();
     if (!newTenementNumber.trim() || !newContact.trim() || !newPassword) {
       setAdminRegError('All fields are required.');
       return;
     }
-
     const trimmed = newTenementNumber.trim();
     if (!/^\d+$/.test(trimmed)) {
-      setAdminRegError('Tenement number must contain digits only (no characters).');
+      setAdminRegError('Tenement number must contain digits only.');
       return;
     }
     const num = parseInt(trimmed, 10);
@@ -90,29 +92,21 @@ export default function AdminDashboard({ currentTab }) {
       setAdminRegError('Tenement number must be between 1 and 60.');
       return;
     }
-
     const result = registerTenement(newTenementNumber, newContact, newPassword);
-
     if (result.success) {
-      setAdminRegSuccess(`Tenement ${newTenementNumber.trim().toUpperCase()} registered successfully!`);
+      setAdminRegSuccess(`Tenement ${trimmed} registered successfully!`);
       setAdminRegError('');
-      
       setNewTenementNumber('');
       setNewContact('');
-      setNewPassword('password');
-
-      setTimeout(() => {
-        setIsAddingTenement(false);
-        setAdminRegSuccess('');
-      }, 2000);
+      setNewPassword('');
+      setTimeout(() => { setIsAddingTenement(false); setAdminRegSuccess(''); }, 2000);
     } else {
       setAdminRegError(result.message);
       setAdminRegSuccess('');
     }
   };
 
-  // Open receipt details
-  const openReceipt = (tenement, monthDue) => {
+  const openReceipt = useCallback((tenement, monthDue) => {
     setReceiptData({
       tenementNumber: tenement.tenementNumber,
       ownerName: tenement.ownerName,
@@ -120,19 +114,21 @@ export default function AdminDashboard({ currentTab }) {
       amount: monthDue.amount,
       dateCleared: monthDue.dateCleared,
       reference: monthDue.reference,
-      method: monthDue.method
+      method: monthDue.method,
     });
     setIsReceiptOpen(true);
-  };
+  }, []);
 
-  // Prompt payment method selection before toggling Paid
-  const triggerPaymentToggle = (tenementNumber, month, currentStatus) => {
+  // Called from TenementModal cells
+  const handleTogglePayment = useCallback((tenementNumber, month, currentStatus) => {
     if (currentStatus === 'Paid') {
-      togglePaymentStatus(tenementNumber, month);
-    } else {
+      if (window.confirm(`Revert ${month} for Unit ${tenementNumber} to Unpaid?`)) {
+        togglePaymentStatus(tenementNumber, month);
+      }
+    } else if (currentStatus === 'Unpaid') {
       setPaymentToggleState({ tenementNumber, month });
     }
-  };
+  }, [togglePaymentStatus]);
 
   const confirmPaymentToggle = (method) => {
     if (paymentToggleState) {
@@ -141,335 +137,405 @@ export default function AdminDashboard({ currentTab }) {
     }
   };
 
-  // Filter tenements by search query
-  const filteredTenements = tenements.filter(t => 
-    t.tenementNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTenements = tenements
+    .filter(t =>
+      t.tenementNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => parseInt(a.tenementNumber) - parseInt(b.tenementNumber));
 
+  // ── Overview Tab ────────────────────────────────────────────────────────────
   const renderOverview = () => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft">
-        <h2 className="font-display-lg text-on-surface font-extrabold">Committee Dashboard</h2>
-        <p className="text-xs text-on-surface-variant font-medium mt-0.5">Global overview of society maintenance funds for July 2026</p>
-      </div>
+    <div className="space-y-6 animate-fadeIn">
 
-      {/* Global Financial Health Bento Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Collected */}
-        <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Collected</span>
-            <span className="material-symbols-outlined text-[#4CAF50] bg-success-container p-2 rounded-full">payments</span>
-          </div>
-          <div>
-            <h3 className="text-3xl font-extrabold text-[#191b23]">₹{totalCollectedThisMonth.toLocaleString('en-IN')}</h3>
-            <p className="text-xs text-on-surface-variant font-semibold mt-1">
-              July Dues: {julyPaidTenements.length} of {totalTenementsCount} paid ({(julyPaidTenements.length/totalTenementsCount*100).toFixed(0)}%)
-            </p>
-          </div>
+      {/* Page header */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display-lg text-on-surface">Society Overview</h2>
+          <p className="text-xs text-on-surface-variant mt-1">
+            Maintenance fund summary for{' '}
+            <span className="font-bold text-on-surface">{CURRENT_MONTH} {CURRENT_YEAR}</span>
+          </p>
         </div>
-
-        {/* Total Pending */}
-        <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Pending</span>
-            <span className="material-symbols-outlined text-[#ba1a1a] bg-error-container p-2 rounded-full">hourglass_empty</span>
-          </div>
-          <div>
-            <h3 className="text-3xl font-extrabold text-[#191b23]">₹{totalPendingThisMonth.toLocaleString('en-IN')}</h3>
-            <p className="text-xs text-on-surface-variant font-semibold mt-1">
-              July Dues: {julyUnpaidTenements.length} tenements outstanding
-            </p>
-          </div>
-        </div>
-
-        {/* Defaulters Widget */}
-        <div className="bg-white p-5 rounded-lg border border-[#E2E8F0] shadow-soft flex flex-col space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Defaulters (July)</h3>
-            <span className="text-[10px] font-bold bg-[#ffdad6] text-error px-2 py-0.5 rounded-full">{defaulters.length} Unpaid</span>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto max-h-[120px] no-scrollbar space-y-2">
-            {defaulters.length === 0 ? (
-              <p className="text-xs text-[#4CAF50] font-bold text-center py-4">Perfect record! Zero pending dues.</p>
-            ) : (
-              defaulters.map((d, idx) => (
-                <div key={idx} className="flex justify-between items-center p-2 bg-surface rounded border border-[#E2E8F0] text-xs font-semibold">
-                  <div>
-                    <span className="font-bold text-on-surface block">Unit {d.tenementNumber}</span>
-                    <span className="text-[10px] text-on-surface-variant">{d.ownerName}</span>
-                  </div>
-                  <a href={`tel:${d.contact}`} className="text-primary hover:text-primary-container p-1 rounded-full hover:bg-surface-container transition-all active-scale">
-                    <span className="material-symbols-outlined text-base">call</span>
-                  </a>
-                </div>
-              ))
-            )}
-          </div>
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg flex-shrink-0">
+          <span className="material-symbols-outlined text-primary text-sm">calendar_today</span>
+          <span className="text-xs font-bold text-primary">{CURRENT_MONTH} {CURRENT_YEAR}</span>
         </div>
       </div>
 
-      {/* Quick notice board status */}
-      <div className="bg-white p-5 rounded-lg border border-[#E2E8F0] shadow-soft space-y-3">
-        <h3 className="font-title-lg font-bold text-on-surface">Active Bulletin Board</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[220px] overflow-y-auto no-scrollbar pt-1">
-          {notices.slice(0, 3).map((notice) => (
-            <div key={notice.id} className="p-3 bg-surface rounded border border-[#E2E8F0] space-y-1.5">
-              <div className="flex justify-between items-center text-[9px] font-bold uppercase text-on-surface-variant">
-                <span>{notice.date}</span>
-                <span className={`px-1.5 py-0.5 rounded-full ${notice.severity === 'critical' ? 'bg-[#ffdad6] text-error' : notice.severity === 'warning' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>{notice.severity}</span>
-              </div>
-              <h4 className="font-bold text-xs text-on-surface truncate">{notice.title}</h4>
-              <p className="text-[11px] text-on-surface-variant line-clamp-2 leading-relaxed">{notice.content}</p>
+      {/* KPI row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Collected */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
+              {CURRENT_MONTH} Collection
+            </span>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
             </div>
-          ))}
-          {notices.length === 0 && (
-            <p className="col-span-3 text-xs text-on-surface-variant text-center py-4">No active bulletin notices.</p>
-          )}
+          </div>
+          <div>
+            <h3 className="text-3xl font-extrabold text-on-surface tracking-tight">
+              ₹{totalCollectedThisMonth.toLocaleString('en-IN')}
+            </h3>
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-on-surface-variant font-semibold">
+                  {currentMonthPaid.length}/{totalTenementsCount} tenements
+                </span>
+                <span className="text-xs font-bold text-emerald-600">{collectionRate}%</span>
+              </div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                  style={{ width: `${collectionRate}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Outstanding */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
+              Outstanding Dues
+            </span>
+            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-error text-[18px]">hourglass_empty</span>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-extrabold text-error tracking-tight">
+              ₹{totalPendingThisMonth.toLocaleString('en-IN')}
+            </h3>
+            <p className="text-sm text-on-surface-variant font-semibold mt-2">
+              <span className="font-bold text-on-surface">{currentMonthUnpaid.length}</span>{' '}
+              tenement{currentMonthUnpaid.length !== 1 ? 's' : ''} yet to pay for {CURRENT_MONTH}
+            </p>
+          </div>
         </div>
       </div>
 
+      {/* ── Defaulters Grid ── */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft ">
+        {defaulterTenements.length === 0 ? 
+          (<div className="flex items-center bg-emerald-500 rounded-xl p-3 justify-between">
+            <div className="flex gap-2 items-center">
+<span className="material-symbols-outlined text-white">verified</span>
+            <h3 className="font-title-lg font-bold text-white"> 
+ All {totalTenementsCount} tenements have paid</h3></div>
+            <h3 className="font-title-lg font-bold text-white"> {CURRENT_MONTH} - {CURRENT_YEAR} </h3>
+
+          </div>) : (<div className="flex items-center bg-error rounded-t-xl p-3 justify-between">
+
+          <h3 className="font-title-lg font-bold text-white"><span className="font-bold text-on-surface text-white text-[20px]">{defaulterTenements.length}</span> Unpaid</h3>
+          <h3 className="font-title-lg font-bold text-white"> {CURRENT_MONTH} - {CURRENT_YEAR} </h3>
+
+        </div>)}
+
+
+
+        {defaulterTenements.length != 0 && (
+          /* Number-only grid: 3 cols mobile → 6 cols large */
+          <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-3 p-6">
+            {defaulterTenements.map((t) => (
+              <button
+                key={t.tenementNumber}
+                onClick={() => openTenement(t.tenementNumber)}
+                className="
+                  group relative aspect-square flex flex-col items-center justify-center
+                  bg-red-50 border-2 border-red-200 rounded-2xl
+                  hover:bg-red-100 hover:border-error hover:shadow-lg hover:shadow-red-100
+                  active:scale-95 transition-all duration-150 cursor-pointer
+                  focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2
+                "
+                aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — Unpaid`}
+                title={`${t.ownerName} · Tap to view`}
+              >
+
+                {/* Unit number */}
+                <span className="text-2xl sm:text-3xl font-extrabold text-error leading-none">
+                  {t.tenementNumber}
+                </span>
+
+
+                {/* Hover label */}
+                <span className="
+                  absolute bottom-0 left-0 right-0 bg-black/50 text-white
+                  text-[15px] font-bold text-center py-1 rounded-b-xl
+                  opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                  truncate px-1
+                ">
+                  {t.ownerName.split(' ')[0]}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bulletin preview */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-title-lg font-bold text-on-surface">Active Bulletin Board</h3>
+          <span className="text-[12px] font-bold text-on-surface-variant bg-slate-50 border border-slate-200 rounded-full px-2.5 py-0.5">
+            {notices.length} notice{notices.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {notices.length === 0 ? (
+          <p className="text-sm text-on-surface-variant text-center py-6">No active notices published.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {notices.slice(0, 3).map((notice) => {
+              const style = severityStyle(notice.severity);
+              return (
+                <div key={notice.id} className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12px] font-bold uppercase text-on-surface-variant">{notice.date}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${style.badge}`}>{notice.severity}</span>
+                  </div>
+                  <h4 className="font-bold text-[15px] text-on-surface leading-tight truncate">{notice.title}</h4>
+                  <p className="text-[13px] text-on-surface-variant line-clamp-2 leading-relaxed">{notice.content}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 
+  // ── Tenements Tab ───────────────────────────────────────────────────────────
+  // Each tenement is a clickable card (no accordion / expand).
+  // Clicking any card opens TenementModal for that unit.
   const renderTenements = () => (
-    <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft space-y-6">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-5 animate-fadeIn">
+
+      {/* Header + controls */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h2 className="font-headline-md text-on-surface font-extrabold">Tenement Directory & Ledger</h2>
-          <p className="text-xs text-on-surface-variant font-medium mt-0.5">Toggle payment statuses and view records for all units</p>
+          <h2 className="font-headline-md text-on-surface font-extrabold">Tenement Directory</h2>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            Tap any unit to view full ledger & manage payments · {CURRENT_MONTH} {CURRENT_YEAR}
+          </p>
         </div>
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-initial">
-            <span className="material-symbols-outlined absolute left-3 top-2 text-on-surface-variant text-lg">search</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
             <input
               type="text"
-              placeholder="Search unit or owner..."
+              placeholder="Search unit or owner…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-60 pl-9 pr-4 py-1.5 border border-outline-variant bg-surface text-on-surface rounded text-xs focus:outline-none focus:border-primary font-semibold"
+              className="pl-9 pr-3 py-1.5 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all w-52"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            )}
           </div>
           <button
-            onClick={() => {
-              setIsAddingTenement(!isAddingTenement);
-              setAdminRegError('');
-              setAdminRegSuccess('');
-            }}
-            className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded shadow-soft hover:bg-primary-container flex items-center space-x-1 transition-all duration-200 active-scale"
+            onClick={() => { setIsAddingTenement(!isAddingTenement); setAdminRegError(''); setAdminRegSuccess(''); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale"
           >
-            <span className="material-symbols-outlined text-sm font-bold">
-              {isAddingTenement ? 'close' : 'add'}
-            </span>
-            <span>{isAddingTenement ? 'Cancel' : 'Add Unit'}</span>
+            <span className="material-symbols-outlined text-sm">{isAddingTenement ? 'close' : 'add'}</span>
+            {isAddingTenement ? 'Cancel' : 'Add Unit'}
           </button>
         </div>
       </div>
 
-      {/* Tenement Registration Form */}
+      {/* Registration form */}
       {isAddingTenement && (
-        <form onSubmit={handleAdminRegisterTenement} className="p-5 bg-surface border border-outline-variant rounded space-y-4 animate-fadeIn">
-          <h3 className="font-title-lg font-bold text-on-surface flex items-center space-x-1.5">
-            <span className="material-symbols-outlined text-primary">add_home</span>
-            <span>Register New Tenement Unit</span>
+        <form
+          onSubmit={handleAdminRegisterTenement}
+          className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 animate-fadeIn"
+        >
+          <h3 className="font-semibold text-sm text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">add_home</span>
+            Register New Tenement Unit
           </h3>
-
           {adminRegError && (
-            <div className="bg-error-container text-error text-xs font-semibold p-3 rounded border border-transparent">
+            <div className="bg-red-50 border border-red-200 text-error text-xs font-semibold p-3 rounded-lg flex items-start gap-2">
+              <span className="material-symbols-outlined text-sm mt-0.5">error</span>
               {adminRegError}
             </div>
           )}
-
           {adminRegSuccess && (
-            <div className="bg-success-container text-success text-xs font-semibold p-3 rounded border border-transparent">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3 rounded-lg flex items-start gap-2">
+              <span className="material-symbols-outlined text-sm mt-0.5">check_circle</span>
               {adminRegSuccess}
             </div>
           )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                Tenement Number
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 42 (1-60)"
-                value={newTenementNumber}
-                onChange={(e) => setNewTenementNumber(e.target.value)}
-                className="w-full px-3 py-1.5 border border-outline-variant bg-white text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                Contact Number
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. +91 99887 76655"
-                value={newContact}
-                onChange={(e) => setNewContact(e.target.value)}
-                className="w-full px-3 py-1.5 border border-outline-variant bg-white text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                Unit Password
-              </label>
-              <input
-                type="password"
-                placeholder="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-1.5 border border-outline-variant bg-white text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { label: 'Tenement Number', placeholder: 'e.g. 42 (1–60)', value: newTenementNumber, setter: setNewTenementNumber, type: 'text' },
+              { label: 'Contact Number', placeholder: '+91 99887 76655', value: newContact, setter: setNewContact, type: 'text' },
+              { label: 'Unit Password', placeholder: 'Min. 6 characters', value: newPassword, setter: setNewPassword, type: 'password' },
+            ].map(({ label, placeholder, value, setter, type }) => (
+              <div key={label}>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">{label}</label>
+                <input
+                  type={type}
+                  placeholder={placeholder}
+                  value={value}
+                  onChange={(e) => setter(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+            ))}
           </div>
-
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => setIsAddingTenement(false)}
-              className="px-4 py-1.5 border border-outline-variant bg-white text-on-surface text-xs font-bold rounded shadow-soft hover:bg-surface-container transition-all duration-200 active-scale"
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded shadow-soft hover:bg-primary-container transition-all duration-200 active-scale"
-            >
-              Create Tenement
-            </button>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setIsAddingTenement(false)} className="px-4 py-1.5 border border-slate-200 bg-white text-on-surface text-xs font-bold rounded-lg hover:bg-slate-50 transition-all active-scale">Cancel</button>
+            <button type="submit" className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale">Create Tenement</button>
           </div>
         </form>
       )}
 
-      {/* Tenements List */}
-      <div className="space-y-4">
-        {filteredTenements.map((tenement) => {
-          const isSelected = selectedTenementNumber === tenement.tenementNumber;
-          const julyDue = tenement.dues.find(d => d.month === currentMonth);
-          const totalPaidCount = tenement.dues.filter(d => d.status === 'Paid').length;
-          
-          return (
-            <div
-              key={tenement.tenementNumber}
-              className={`border border-[#E2E8F0] rounded overflow-hidden transition-all duration-200 ${
-                isSelected ? 'ring-1 ring-primary shadow-sm bg-white' : 'bg-surface hover:bg-surface-container'
-              }`}
-            >
-              {/* Row Summary / Header */}
-              <div
-                onClick={() => setSelectedTenementNumber(isSelected ? null : tenement.tenementNumber)}
-                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
+      {/* Result count */}
+      {searchQuery && (
+        <p className="text-xs text-on-surface-variant">
+          Showing <span className="font-bold text-on-surface">{filteredTenements.length}</span> of {tenements.length} tenements
+        </p>
+      )}
+
+      {/* ── Tenement grid — each card opens modal on click, NO accordion ── */}
+      {filteredTenements.length === 0 ? (
+        <div className="text-center py-12">
+          <span className="material-symbols-outlined text-4xl text-slate-300">search_off</span>
+          <p className="text-sm text-on-surface-variant mt-2">No tenements match your search.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredTenements.map((tenement) => {
+            const currentDue = tenement.dues.find(d => d.month === CURRENT_MONTH);
+            const paidCount = tenement.dues.filter(d => d.status === 'Paid').length;
+            const unpaidCount = tenement.dues.filter(d => d.status === 'Unpaid').length;
+            const isPaid = currentDue?.status === 'Paid';
+            const isUnpaid = currentDue?.status === 'Unpaid';
+
+            return (
+              <button
+                key={tenement.tenementNumber}
+                onClick={() => openTenement(tenement.tenementNumber)}
+                className={`
+                  group w-full flex items-center justify-between p-4 rounded-xl border
+                  transition-all duration-150 active:scale-[0.98]
+                  hover:shadow-md hover:-translate-y-0.5
+                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
+                  ${isUnpaid
+                    ? 'bg-red-50 border-red-200 hover:border-red-300'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                  }
+                `}
+                aria-label={`Unit ${tenement.tenementNumber} — ${tenement.ownerName}`}
               >
-                {/* Info block */}
-                <div className="flex items-center space-x-3.5">
-                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm flex-shrink-0 shadow-sm ${isUnpaid ? 'bg-error text-white' : 'bg-primary text-white'
+                    }`}>
                     {tenement.tenementNumber}
                   </div>
-                  <div>
+                  <div className="text-left">
                     <h4 className="text-sm font-bold text-on-surface">{tenement.ownerName}</h4>
-                    <p className="text-[11px] text-on-surface-variant font-semibold">{tenement.contact}</p>
+                    <p className="text-[11px] text-on-surface-variant">{tenement.contact}</p>
                   </div>
                 </div>
 
-                {/* Status & Toggle block */}
-                <div className="flex items-center justify-between sm:justify-end space-x-6">
-                  {/* Ledger summary */}
-                  <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Dues Status (July)</span>
-                    {julyDue?.status === 'Paid' ? (
-                      <span className="text-[11px] font-bold text-success flex items-center mt-0.5">
-                        <span className="material-symbols-outlined text-xs mr-0.5 font-bold">check_circle</span> Paid
+                <div className="flex items-center gap-4 sm:gap-6">
+                  {/* Current month badge */}
+                  <div className="text-right hidden sm:block">
+                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">{CURRENT_MONTH}</span>
+                    <span className={`text-[11px] font-bold flex items-center justify-end gap-0.5 mt-0.5 ${isPaid ? 'text-emerald-600' : isUnpaid ? 'text-error' : 'text-slate-500'}`}>
+                      <span className="material-symbols-outlined text-xs">
+                        {isPaid ? 'check_circle' : isUnpaid ? 'cancel' : 'schedule'}
                       </span>
-                    ) : (
-                      <span className="text-[11px] font-bold text-error flex items-center mt-0.5">
-                        <span className="material-symbols-outlined text-xs mr-0.5 font-bold">error</span> Unpaid
-                      </span>
+                      {currentDue?.status ?? 'N/A'}
+                    </span>
+                  </div>
+
+                  {/* Yearly progress */}
+                  <div className="text-right hidden md:block">
+                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Year</span>
+                    <span className={`text-xs font-bold ${paidCount === 12 ? 'text-emerald-600' : 'text-primary'}`}>{paidCount}/12 paid</span>
+                    {unpaidCount > 0 && (
+                      <span className="text-[10px] font-bold text-error block">{unpaidCount} overdue</span>
                     )}
                   </div>
 
-                  <div className="text-left sm:text-right hidden sm:block">
-                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Dues Ledger</span>
-                    <span className="text-xs font-bold text-primary">{totalPaidCount} / 12 Months Paid</span>
-                  </div>
-
-                  <span className="material-symbols-outlined text-on-surface-variant transform transition-transform duration-300">
-                    {isSelected ? 'expand_less' : 'expand_more'}
+                  <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors duration-150">
+                    arrow_forward
                   </span>
                 </div>
-              </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
-              {/* Expanded details: 12-Month Grid */}
-              {isSelected && (
-                <div className="p-4 bg-white border-t border-[#E2E8F0] space-y-4 animate-fadeIn">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <p className="text-xs text-on-surface-variant font-semibold">
-                      Click status badge to toggle payment between <span className="text-success font-bold">Paid</span> and <span className="text-error font-bold">Unpaid</span>.
-                    </p>
-                    <div className="text-xs font-semibold bg-surface-container px-3 py-1.5 rounded">
-                      <span className="text-on-surface">Yearly Progress:</span> <span className="text-primary font-bold">{totalPaidCount} / 12 Months</span>
-                    </div>
-                  </div>
+  // ── Notice Broadcaster Tab ──────────────────────────────────────────────────
+  const renderNoticeBroadcaster = () => (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-5 animate-fadeIn">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 className="font-headline-md text-on-surface font-extrabold">Active Announcements</h2>
+          <p className="text-xs text-on-surface-variant mt-0.5">Manage live bulletins broadcasted to residents</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold bg-slate-50 border border-slate-200 text-on-surface-variant px-2.5 py-1 rounded-full">{notices.length} total</span>
+          <button
+            onClick={() => setIsPublishNoticeOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale"
+          >
+            <span className="material-symbols-outlined text-sm">campaign</span>
+            Publish Notice
+          </button>
+        </div>
+      </div>
 
-                  {/* 12-month calendar ledger */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {tenement.dues.map((due) => {
-                      const isMonthPaid = due.status === 'Paid';
-                      const isMonthUnpaid = due.status === 'Unpaid';
-                      const isMonthUnbilled = due.status === 'Unbilled';
-
-                      return (
-                        <div
-                          key={due.month}
-                          className={`p-3 rounded border flex flex-col justify-between space-y-3 transition-all ${
-                            isMonthPaid 
-                              ? 'bg-success-container bg-opacity-30 border-[#d3f5d5]' 
-                              : isMonthUnpaid 
-                                ? 'bg-error-container bg-opacity-30 border-[#ffdad6]' 
-                                : 'bg-surface border-[#E2E8F0]'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <span className="text-[11px] font-bold text-on-surface leading-tight">{due.month}</span>
-                            <span className="text-[10px] text-on-surface-variant font-mono font-semibold">₹{due.amount}</span>
-                          </div>
-
-                          <div className="flex flex-col space-y-1">
-                            {/* Toggle Button */}
-                            <button
-                              onClick={() => triggerPaymentToggle(tenement.tenementNumber, due.month, due.status)}
-                              className={`w-full py-1 text-[10px] font-bold rounded shadow-sm text-center border uppercase transition-all duration-200 active-scale ${
-                                isMonthPaid
-                                  ? 'bg-[#4CAF50] border-transparent text-white hover:bg-opacity-95'
-                                  : isMonthUnpaid
-                                    ? 'bg-[#ba1a1a] border-transparent text-white hover:bg-opacity-95'
-                                    : 'bg-white border-outline-variant text-on-surface hover:bg-surface-container-high'
-                              }`}
-                            >
-                              {due.status}
-                            </button>
-
-                            {/* View Receipt option for paid months */}
-                            {isMonthPaid && (
-                              <button
-                                onClick={() => openReceipt(tenement, due)}
-                                className="text-[9px] text-primary font-bold hover:underline text-left mt-0.5 flex items-center"
-                              >
-                                <span className="material-symbols-outlined text-[10px] mr-0.5">receipt_long</span>
-                                Receipt
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+      <div className="space-y-3 max-h-[600px] overflow-y-auto thin-scrollbar pr-1">
+        {notices.length === 0 ? (
+          <div className="text-center py-12">
+            <span className="material-symbols-outlined text-4xl text-slate-300">campaign</span>
+            <p className="text-sm text-on-surface-variant mt-2 font-medium">No notices published yet.</p>
+          </div>
+        ) : notices.map((notice) => {
+          const style = severityStyle(notice.severity);
+          return (
+            <div
+              key={notice.id}
+              className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-start gap-4 hover:bg-white hover:border-slate-300 transition-all cursor-pointer group"
+              onClick={() => setSelectedNotice(notice)}
+            >
+              <div className="flex gap-3 flex-1 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${style.badge}`}>
+                  <span className={`material-symbols-outlined text-sm ${style.iconColor}`}>{style.icon}</span>
                 </div>
-              )}
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] text-on-surface-variant font-bold">{notice.date}</span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${style.badge}`}>{notice.severity}</span>
+                  </div>
+                  <h4 className="font-bold text-xs text-on-surface leading-tight group-hover:text-primary transition-colors">{notice.title}</h4>
+                  <p className="text-[11px] sm:text-xs text-on-surface-variant leading-relaxed font-medium line-clamp-2">{notice.content}</p>
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm('Delete this notice?')) deleteNotice(notice.id);
+                }}
+                className="p-1.5 text-slate-400 hover:text-error hover:bg-red-50 rounded-lg transition-all active-scale flex-shrink-0"
+                title="Delete Notice"
+              >
+                <span className="material-symbols-outlined text-sm">delete</span>
+              </button>
             </div>
           );
         })}
@@ -477,171 +543,63 @@ export default function AdminDashboard({ currentTab }) {
     </div>
   );
 
-  const renderNoticeBroadcaster = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      {/* Notice Form */}
-      <div className="lg:col-span-1 bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft space-y-4 h-fit">
-        <div>
-          <h2 className="font-headline-md text-on-surface font-extrabold">Broadcast Notice</h2>
-          <p className="text-xs text-on-surface-variant font-medium mt-0.5">Draft a society-wide notification</p>
-        </div>
-
-        {noticeSuccessMsg && (
-          <div className="bg-success-container text-success text-xs font-semibold p-3 rounded flex items-center space-x-2">
-            <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
-            <span>{noticeSuccessMsg}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleBroadcastNotice} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-              Notice Title
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Water Supply Shutdown"
-              value={noticeTitle}
-              onChange={(e) => setNoticeTitle(e.target.value)}
-              className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-              Notice Details
-            </label>
-            <textarea
-              rows="4"
-              placeholder="Write the full announcement..."
-              value={noticeContent}
-              onChange={(e) => setNoticeContent(e.target.value)}
-              className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-semibold focus:outline-none focus:border-primary resize-none"
-            ></textarea>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-              Severity Level
-            </label>
-            <select
-              value={noticeSeverity}
-              onChange={(e) => setNoticeSeverity(e.target.value)}
-              className="w-full px-3.5 py-2 border border-outline-variant bg-surface text-on-surface rounded text-xs font-bold focus:outline-none focus:border-primary"
-            >
-              <option value="info">Info (Blue)</option>
-              <option value="warning">Warning (Amber)</option>
-              <option value="critical">Critical (Red)</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-2 bg-primary text-white text-xs font-bold rounded shadow-soft hover:bg-primary-container flex items-center justify-center space-x-1.5 transition-all duration-200 active-scale"
-          >
-            <span className="material-symbols-outlined text-sm font-bold">campaign</span>
-            <span>Publish Notice</span>
-          </button>
-        </form>
-      </div>
-
-      {/* Active Broadcasts list */}
-      <div className="lg:col-span-2 bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft space-y-4">
-        <div>
-          <h2 className="font-headline-md text-on-surface font-extrabold">Active Announcements</h2>
-          <p className="text-xs text-on-surface-variant font-medium mt-0.5">Manage live bulletins broadcasted to residents</p>
-        </div>
-
-        <div className="space-y-3 max-h-[460px] overflow-y-auto no-scrollbar pr-1">
-          {notices.length === 0 ? (
-            <p className="text-xs text-on-surface-variant text-center py-8">No notices broadcasted yet.</p>
-          ) : (
-            notices.map((notice) => {
-              let badgeColor = 'bg-blue-50 text-primary border-blue-200';
-              if (notice.severity === 'critical') badgeColor = 'bg-red-50 text-error border-[#ffdad6]';
-              else if (notice.severity === 'warning') badgeColor = 'bg-amber-50 text-amber-800 border-amber-200';
-
-              return (
-                <div
-                  key={notice.id}
-                  className="p-4 bg-surface border border-[#E2E8F0] rounded flex justify-between items-start gap-4 hover:bg-surface-container transition-all"
-                >
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[10px] text-on-surface-variant font-bold">{notice.date}</span>
-                      <span className={`text-[9px] font-bold px-2 py-0.2 rounded-full border uppercase ${badgeColor}`}>{notice.severity}</span>
-                    </div>
-                    <h4 className="font-bold text-xs text-on-surface leading-tight truncate">{notice.title}</h4>
-                    <p className="text-xs text-on-surface-variant leading-relaxed font-semibold">{notice.content}</p>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (confirm('Are you sure you want to delete this notice?')) {
-                        deleteNotice(notice.id);
-                      }
-                    }}
-                    className="p-1 text-on-surface-variant hover:text-error hover:bg-error-container hover:bg-opacity-40 rounded transition-all active-scale"
-                    title="Delete Notice"
-                  >
-                    <span className="material-symbols-outlined text-sm font-bold">delete</span>
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-    </div>
-  );
-
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
       {currentTab === 'overview' && renderOverview()}
       {currentTab === 'tenements' && renderTenements()}
+      {currentTab === 'monthly-grid' && <MonthlyGridView />}
       {currentTab === 'notices' && renderNoticeBroadcaster()}
 
-      {/* Payment Method Selector Modal */}
+      {/* ── Tenement Detail Modal (shared across all tabs) ── */}
+      {activeTenement && (
+        <TenementModal
+          tenement={activeTenement}
+          onClose={closeTenement}
+          onTogglePayment={handleTogglePayment}
+          onOpenReceipt={openReceipt}
+        />
+      )}
+
+      {/* ── Payment Method Modal (triggered from TenementModal) ── */}
       {paymentToggleState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm">
-          <div className="bg-white rounded border border-[#E2E8F0] shadow-soft max-w-sm w-full p-5 space-y-4">
-            <h3 className="font-bold text-sm text-on-surface flex items-center space-x-1.5">
-              <span className="material-symbols-outlined text-primary text-xl">payments</span>
-              <span>Confirm Payment Receipt</span>
-            </h3>
-            
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Verify receipt of <span className="font-bold text-on-surface">₹1,200</span> for <span className="font-bold text-on-surface">{paymentToggleState.month}</span> from Unit <span className="font-bold text-primary">{paymentToggleState.tenementNumber}</span>. Select clear mode:
-            </p>
-
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => confirmPaymentToggle('Cheque')}
-                className="py-2 border border-outline-variant bg-surface hover:bg-surface-container text-[11px] font-bold text-on-surface rounded shadow-soft transition-all active-scale"
-              >
-                Cheque
-              </button>
-              <button
-                onClick={() => confirmPaymentToggle('Cash')}
-                className="py-2 border border-outline-variant bg-surface hover:bg-surface-container text-[11px] font-bold text-on-surface rounded shadow-soft transition-all active-scale"
-              >
-                Cash
-              </button>
-              <button
-                onClick={() => confirmPaymentToggle('Bank Transfer')}
-                className="py-2 border border-outline-variant bg-surface hover:bg-surface-container text-[11px] font-bold text-on-surface rounded shadow-soft transition-all active-scale"
-              >
-                Bank Transfer
-              </button>
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setPaymentToggleState(null)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 space-y-5 animate-scaleIn"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-xl">payments</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-on-surface">Confirm Payment Receipt</h3>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  Mark <span className="font-bold text-on-surface">₹{DUES_AMOUNT.toLocaleString('en-IN')}</span> for{' '}
+                  <span className="font-bold text-on-surface">{paymentToggleState.month} {CURRENT_YEAR}</span> — Unit{' '}
+                  <span className="font-bold text-primary">{paymentToggleState.tenementNumber}</span> as received.
+                </p>
+              </div>
             </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => setPaymentToggleState(null)}
-                className="px-4 py-1.5 text-xs font-bold text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded transition-all active-scale"
-              >
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Select payment mode</p>
+              <div className="grid grid-cols-3 gap-2">
+                {['Cheque', 'Cash', 'Bank Transfer'].map(method => (
+                  <button
+                    key={method}
+                    onClick={() => confirmPaymentToggle(method)}
+                    className="py-3 border border-slate-200 bg-slate-50 hover:bg-primary hover:text-white hover:border-primary text-[11px] font-bold text-on-surface rounded-xl transition-all active-scale"
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button onClick={() => setPaymentToggleState(null)} className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-all active-scale">
                 Cancel
               </button>
             </div>
@@ -649,7 +607,105 @@ export default function AdminDashboard({ currentTab }) {
         </div>
       )}
 
-      {/* Printable Receipt Overlay */}
+      {/* ── View Notice Modal ── */}
+      {selectedNotice && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setSelectedNotice(null)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-scaleIn"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] text-on-surface-variant font-bold">{selectedNotice.date}</span>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${severityStyle(selectedNotice.severity).badge}`}>{selectedNotice.severity}</span>
+                </div>
+                <h2 className="font-headline-md text-on-surface font-extrabold pr-4">{selectedNotice.title}</h2>
+              </div>
+              <button onClick={() => setSelectedNotice(null)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all active-scale flex-shrink-0">
+                <span className="material-symbols-outlined text-slate-500 text-sm">close</span>
+              </button>
+            </div>
+            <div className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-100">
+              {selectedNotice.content}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Publish Notice Modal ── */}
+      {isPublishNoticeOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setIsPublishNoticeOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 animate-scaleIn"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-headline-md text-on-surface font-extrabold flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">campaign</span>
+                  Broadcast Notice
+                </h2>
+                <p className="text-xs text-on-surface-variant mt-0.5">Draft a society-wide notification</p>
+              </div>
+              <button onClick={() => setIsPublishNoticeOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all active-scale">
+                <span className="material-symbols-outlined text-slate-500 text-sm">close</span>
+              </button>
+            </div>
+
+            {noticeSuccessMsg && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3 rounded-lg flex items-center gap-2 animate-fadeIn">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                {noticeSuccessMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleBroadcastNotice} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Notice Title</label>
+                <input type="text" placeholder="e.g. Water Supply Shutdown" value={noticeTitle} onChange={(e) => setNoticeTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Notice Details</label>
+                <textarea rows={4} placeholder="Write the full announcement…" value={noticeContent} onChange={(e) => setNoticeContent(e.target.value)}
+                  className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all resize-none" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Severity Level</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['info', 'warning', 'critical'].map((sev) => {
+                    const style = severityStyle(sev);
+                    return (
+                      <button key={sev} type="button" onClick={() => setNoticeSeverity(sev)}
+                        className={`py-2 text-[11px] font-bold rounded-lg border transition-all active-scale capitalize ${noticeSeverity === sev ? `${style.badge} ring-1 ring-offset-1` : 'border-slate-200 bg-slate-50 text-on-surface-variant hover:bg-slate-100'}`}>
+                        {sev}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 mt-2">
+                <button type="button" onClick={() => setIsPublishNoticeOpen(false)} className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-all active-scale">
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container flex items-center justify-center gap-1.5 transition-all active-scale">
+                  <span className="material-symbols-outlined text-sm">campaign</span>
+                  Publish Notice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Receipt Modal ── */}
       <ReceiptModal
         isOpen={isReceiptOpen}
         onClose={() => setIsReceiptOpen(false)}

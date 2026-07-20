@@ -26,16 +26,20 @@ function AppContent() {
 
   // Central navigation dispatcher to handle routing + subview tabs
   const handleNavigate = (viewName) => {
-    if (viewName === 'overview' || viewName === 'tenements' || viewName === 'notices') {
+    const adminTabs    = ['overview', 'tenements', 'notices', 'monthly-grid'];
+    const residentTabs = ['dashboard', 'ledger', 'notices', 'profile'];
+
+    if (adminTabs.includes(viewName)) {
       setCurrentTab(viewName);
       navigate('/admin');
-    } else if (viewName === 'dashboard' || viewName === 'ledger') {
+    } else if (residentTabs.includes(viewName)) {
       setCurrentTab(viewName);
       navigate('/resident');
     } else if (viewName === 'login') {
       navigate('/login');
     }
   };
+
 
   return (
     <Routes>
