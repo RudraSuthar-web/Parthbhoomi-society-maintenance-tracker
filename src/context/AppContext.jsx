@@ -1,10 +1,67 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { initialTenements, initialNotices, mockUsers } from '../data/mockData';
+import { CURRENT_YEAR, CURRENT_MONTH, ALL_MONTHS, DUES_AMOUNT } from '../utils/dateUtils';
+import {
+  getMaintenanceAmount, saveMaintenanceAmount,
+  getTenements, getNotices, createNotice, deleteNoticeById,
+  registerTenementBackend, recordInstallmentBackend,
+  revertPaymentBackend, updateProfileBackend,
+} from '../services/apiService';
 
 export const AppContext = createContext();
 
+// ── Helper: compute due status from installments ──────────────────────────────
+export function computeDueStatus(due, maintenanceAmount) {
+  if (due.status === 'Unbilled') return 'Unbilled';
+  const installments = due.installments || [];
+  const totalPaid = installments.reduce((s, i) => s + (i.amount || 0), 0);
+  if (totalPaid <= 0) return 'Unpaid';
+  if (totalPaid >= maintenanceAmount) return 'Paid';
+  return 'Partial';
+}
+
+// ── Helper: migrate legacy dues to installments format ────────────────────────
+function migrateDue(due) {
+  if (due.installments !== undefined) return due;
+  if (due.status === 'Paid' && due.amount) {
+    return {
+      ...due,
+      installments: [{
+        amount: due.amount,
+        date: due.dateCleared || new Date().toISOString().split('T')[0],
+        reference: due.reference || '',
+        method: due.method || 'Cash',
+      }],
+      amountPaid: due.amount,
+    };
+  }
+  return { ...due, installments: [], amountPaid: 0 };
+}
+
 export const AppProvider = ({ children }) => {
-  // Load initial states from localStorage if available
+  // ── Global maintenance amount (admin-configurable) ──────────────────────────
+  const [maintenanceAmount, setMaintenanceAmountState] = useState(() => {
+    const saved = localStorage.getItem('society_maintenance_amount');
+    return saved ? Number(saved) : DUES_AMOUNT;
+  });
+
+  useEffect(() => {
+    getMaintenanceAmount().then(amount => {
+      if (amount && amount !== maintenanceAmount) {
+        setMaintenanceAmountState(amount);
+      }
+    });
+  }, []);
+
+  const setMaintenanceAmount = (amount) => {
+    const val = Number(amount);
+    if (val > 0) {
+      setMaintenanceAmountState(val);
+      saveMaintenanceAmount(val);
+    }
+  };
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('society_user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -15,17 +72,55 @@ export const AppProvider = ({ children }) => {
     return savedUsers ? JSON.parse(savedUsers) : mockUsers;
   });
 
+  // ── Tenements ──────────────────────────────────────────────────────────────
   const [tenements, setTenements] = useState(() => {
     const savedTenements = localStorage.getItem('society_tenements');
-    return savedTenements ? JSON.parse(savedTenements) : initialTenements;
+    const parsed = savedTenements ? JSON.parse(savedTenements) : initialTenements;
+    return parsed.map(t => {
+      let dues = t.dues.map(d => migrateDue({ ...d, year: d.year || 2026 }));
+      return { ...t, dues };
+    });
   });
 
+  useEffect(() => {
+    getTenements().then(fetched => {
+      if (fetched && fetched.length > 0) {
+        setTenements(fetched.map(t => ({
+          ...t,
+          dues: t.dues.map(d => migrateDue({ ...d, year: d.year || 2026 })),
+        })));
+      }
+    });
+  }, []);
+
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
+
+  const baseYears = [2025, 2026, 2027, CURRENT_YEAR];
+  tenements.forEach(t => t.dues.forEach(d => {
+    if (d.year) baseYears.push(d.year);
+  }));
+  const minYear = Math.min(...baseYears);
+  const maxYear = Math.max(...baseYears);
+
+  const availableYears = [];
+  for (let y = maxYear; y >= minYear; y--) {
+    availableYears.push(y);
+  }
+
+  // ── Notices ────────────────────────────────────────────────────────────────
   const [notices, setNotices] = useState(() => {
     const savedNotices = localStorage.getItem('society_notices');
     return savedNotices ? JSON.parse(savedNotices) : initialNotices;
   });
 
-  // Sync to localStorage
+  useEffect(() => {
+    getNotices().then(fetched => {
+      if (fetched && fetched.length > 0) setNotices(fetched);
+    });
+  }, []);
+
+  // ── Sync local storage for offline resiliency ─────────────────────────────
   useEffect(() => {
     localStorage.setItem('society_users', JSON.stringify(users));
   }, [users]);
@@ -46,7 +141,7 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Authentication action
+  // ── Authentication ─────────────────────────────────────────────────────────
   const login = (username, password) => {
     const foundUser = users.find(
       (u) => u.username.toUpperCase() === username.trim().toUpperCase() && u.password === password
@@ -62,7 +157,7 @@ export const AppProvider = ({ children }) => {
     setUser(null);
   };
 
-  // Register a new tenement/resident
+  // ── Register a new tenement ────────────────────────────────────────────────
   const registerTenement = (tenementNumber, contact, password) => {
     const trimmedUnit = tenementNumber.trim();
     if (!/^\d+$/.test(trimmedUnit)) {
@@ -74,60 +169,54 @@ export const AppProvider = ({ children }) => {
     }
     const formattedUnit = String(num);
 
-    // Check if tenement number already registered
     const tenementExists = tenements.some(t => t.tenementNumber === formattedUnit);
     const userExists = users.some(u => u.username === formattedUnit);
-    
     if (tenementExists || userExists) {
       return { success: false, message: `Tenement ${formattedUnit} is already registered. Please login.` };
     }
 
     const defaultOwnerName = `Resident Unit ${formattedUnit}`;
-
-    // Prepare default 12-month dues
-    const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0];
-    const defaultDues = [
-      { month: "January", status: "Paid", amount: 1200, dateCleared: formattedDate, reference: "TXN" + Math.floor(10000 + Math.random() * 90000), method: "Bank Transfer" },
-      { month: "February", status: "Paid", amount: 1200, dateCleared: formattedDate, reference: "TXN" + Math.floor(10000 + Math.random() * 90000), method: "Bank Transfer" },
-      { month: "March", status: "Paid", amount: 1200, dateCleared: formattedDate, reference: "TXN" + Math.floor(10000 + Math.random() * 90000), method: "Bank Transfer" },
-      { month: "April", status: "Paid", amount: 1200, dateCleared: formattedDate, reference: "TXN" + Math.floor(10000 + Math.random() * 90000), method: "Bank Transfer" },
-      { month: "May", status: "Paid", amount: 1200, dateCleared: formattedDate, reference: "TXN" + Math.floor(10000 + Math.random() * 90000), method: "Bank Transfer" },
-      { month: "June", status: "Paid", amount: 1200, dateCleared: formattedDate, reference: "TXN" + Math.floor(10000 + Math.random() * 90000), method: "Bank Transfer" },
-      { month: "July", status: "Unpaid", amount: 1200 },
-      { month: "August", status: "Unbilled", amount: 1200 },
-      { month: "September", status: "Unbilled", amount: 1200 },
-      { month: "October", status: "Unbilled", amount: 1200 },
-      { month: "November", status: "Unbilled", amount: 1200 },
-      { month: "December", status: "Unbilled", amount: 1200 }
-    ];
+    const defaultDues = [];
+    availableYears.forEach(year => {
+      ALL_MONTHS.forEach(month => {
+        defaultDues.push({
+          month,
+          status: 'Unbilled',
+          amount: maintenanceAmount,
+          year,
+          installments: [],
+          amountPaid: 0,
+        });
+      });
+    });
 
     const newTenement = {
       tenementNumber: formattedUnit,
       ownerName: defaultOwnerName,
       contact: contact.trim(),
-      dues: defaultDues
+      dues: defaultDues,
     };
 
     const newUser = {
       username: formattedUnit,
-      role: "resident",
+      role: 'resident',
       password: password,
-      name: defaultOwnerName
+      name: defaultOwnerName,
     };
 
-    // Update states
     setTenements(prev => [...prev, newTenement]);
     setUsers(prev => [...prev, newUser]);
-    
-    // Auto login if admin is not already logged in
+
+    // Async sync with Supabase / Backend
+    registerTenementBackend(formattedUnit, contact.trim(), password, maintenanceAmount);
+
     if (!user || user.role !== 'admin') {
       setUser(newUser);
     }
     return { success: true };
   };
 
-  // Update Profile for Resident
+  // ── Update Profile ─────────────────────────────────────────────────────────
   const updateProfile = (ownerName, contact) => {
     if (!user || user.role === 'admin') return { success: false, message: 'Only residents can update profiles.' };
 
@@ -138,23 +227,19 @@ export const AppProvider = ({ children }) => {
       return { success: false, message: 'Name and contact are required.' };
     }
 
-    setTenements(prevTenements => {
-      return prevTenements.map(t => {
-        if (t.tenementNumber === user.username) {
-          return { ...t, ownerName: formattedName, contact: formattedContact };
-        }
-        return t;
-      });
-    });
+    setTenements(prevTenements => prevTenements.map(t => {
+      if (t.tenementNumber === user.username) {
+        return { ...t, ownerName: formattedName, contact: formattedContact };
+      }
+      return t;
+    }));
 
-    setUsers(prevUsers => {
-      return prevUsers.map(u => {
-        if (u.username === user.username) {
-          return { ...u, name: formattedName };
-        }
-        return u;
-      });
-    });
+    setUsers(prevUsers => prevUsers.map(u => {
+      if (u.username === user.username) {
+        return { ...u, name: formattedName };
+      }
+      return u;
+    }));
 
     setUser(prevUser => {
       const updated = { ...prevUser, name: formattedName };
@@ -162,60 +247,114 @@ export const AppProvider = ({ children }) => {
       return updated;
     });
 
+    // Async sync with Supabase / Backend
+    updateProfileBackend(user.username, formattedName, formattedContact);
+
     return { success: true };
   };
 
-  // Toggle payment status (Unpaid <=> Paid)
-  const togglePaymentStatus = (tenementNumber, monthName, customMethod = 'Cash') => {
-    setTenements((prevTenements) => {
-      return prevTenements.map((tenement) => {
-        if (tenement.tenementNumber === tenementNumber) {
-          const updatedDues = tenement.dues.map((due) => {
-            if (due.month === monthName) {
-              if (due.status === 'Paid') {
-                // Toggle to Unpaid
-                const { dateCleared, reference, method, ...unpaidDue } = due;
-                return { ...unpaidDue, status: 'Unpaid' };
-              } else {
-                // Toggle to Paid
-                const today = new Date();
-                const formattedDate = today.toISOString().split('T')[0];
-                const randomRef = 'TXN' + Math.floor(10000 + Math.random() * 90000);
-                return {
-                  ...due,
-                  status: 'Paid',
-                  dateCleared: formattedDate,
-                  reference: randomRef,
-                  method: customMethod
-                };
-              }
-            }
-            return due;
-          });
-          return { ...tenement, dues: updatedDues };
-        }
-        return tenement;
-      });
+  // ── Add an installment payment (partial or full) ───────────────────────────
+  const addInstallment = (tenementNumber, monthName, installmentData, customYear = selectedYear) => {
+    setTenements(prevTenements =>
+      prevTenements.map(tenement => {
+        if (tenement.tenementNumber !== tenementNumber) return tenement;
+
+        const updatedDues = tenement.dues.map(due => {
+          if (due.month !== monthName || due.year !== customYear) return due;
+          if (due.status === 'Unbilled') return due;
+
+          const existingInstallments = due.installments || [];
+          const newInstallments = [...existingInstallments, installmentData];
+          const totalPaid = newInstallments.reduce((s, i) => s + (i.amount || 0), 0);
+          const isFullyPaid = totalPaid >= maintenanceAmount;
+          const newStatus = isFullyPaid ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid');
+
+          // Async sync with Supabase / Backend
+          recordInstallmentBackend(
+            tenementNumber,
+            monthName,
+            customYear,
+            installmentData,
+            due.status,
+            totalPaid,
+            maintenanceAmount
+          );
+
+          return {
+            ...due,
+            installments: newInstallments,
+            amountPaid: totalPaid,
+            status: newStatus,
+            ...(isFullyPaid ? {
+              dateCleared: installmentData.date,
+              reference: installmentData.reference,
+              method: installmentData.method,
+              amount: maintenanceAmount,
+            } : {
+              amount: maintenanceAmount,
+            }),
+          };
+        });
+
+        return { ...tenement, dues: updatedDues };
+      })
+    );
+  };
+
+  // ── Revert a payment (clear all installments) ──────────────────────────────
+  const revertPayment = (tenementNumber, monthName, customYear = selectedYear) => {
+    setTenements(prevTenements =>
+      prevTenements.map(tenement => {
+        if (tenement.tenementNumber !== tenementNumber) return tenement;
+
+        const updatedDues = tenement.dues.map(due => {
+          if (due.month !== monthName || due.year !== customYear) return due;
+          if (due.status === 'Unbilled') return due;
+
+          // Async sync with Supabase / Backend
+          revertPaymentBackend(tenementNumber, monthName, customYear, maintenanceAmount);
+
+          const { dateCleared, reference, method, ...rest } = due;
+          return {
+            ...rest,
+            status: 'Unpaid',
+            installments: [],
+            amountPaid: 0,
+            amount: maintenanceAmount,
+          };
+        });
+
+        return { ...tenement, dues: updatedDues };
+      })
+    );
+  };
+
+  // ── Legacy togglePaymentStatus ─────────────────────────────────────────────
+  const togglePaymentStatus = (tenementNumber, monthName, customMethod = 'Cash', customAmount = maintenanceAmount, customReference = '', customYear = selectedYear) => {
+    if (tenements.find(t => t.tenementNumber === tenementNumber)?.dues.find(d => d.month === monthName && d.year === customYear)?.status === 'Paid') {
+      revertPayment(tenementNumber, monthName, customYear);
+    } else {
+      const today = new Date().toISOString().split('T')[0];
+      const randomRef = 'TXN' + Math.floor(10000 + Math.random() * 90000);
+      addInstallment(
+        tenementNumber,
+        monthName,
+        { amount: customAmount, date: today, reference: customReference || randomRef, method: customMethod },
+        customYear
+      );
+    }
+  };
+
+  // ── Notices ────────────────────────────────────────────────────────────────
+  const addNotice = (title, content) => {
+    createNotice(title, content).then(newNotice => {
+      setNotices(prevNotices => [newNotice, ...prevNotices]);
     });
   };
 
-  // Add a new notice
-  const addNotice = (title, content, severity = 'info') => {
-    const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0];
-    const newNotice = {
-      id: 'N' + (notices.length + 1) + '-' + Math.floor(Math.random() * 1000),
-      title,
-      content,
-      date: formattedDate,
-      severity
-    };
-    setNotices((prevNotices) => [newNotice, ...prevNotices]);
-  };
-
-  // Delete a notice (useful utility)
   const deleteNotice = (id) => {
-    setNotices((prevNotices) => prevNotices.filter((n) => n.id !== id));
+    setNotices(prevNotices => prevNotices.filter(n => n.id !== id));
+    deleteNoticeById(id);
   };
 
   return (
@@ -223,15 +362,24 @@ export const AppProvider = ({ children }) => {
       value={{
         user,
         users,
+        selectedYear,
+        setSelectedYear,
+        selectedMonth,
+        setSelectedMonth,
+        availableYears,
         tenements,
         notices,
+        maintenanceAmount,
+        setMaintenanceAmount,
         login,
         logout,
         registerTenement,
         updateProfile,
+        addInstallment,
+        revertPayment,
         togglePaymentStatus,
         addNotice,
-        deleteNotice
+        deleteNotice,
       }}
     >
       {children}

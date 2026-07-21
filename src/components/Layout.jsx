@@ -1,13 +1,19 @@
 import React, { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { CURRENT_MONTH, CURRENT_YEAR } from '../utils/dateUtils';
+import { ALL_MONTHS, CURRENT_MONTH, CURRENT_YEAR } from '../utils/dateUtils';
 
 export default function Layout({ children, currentTab, setCurrentTab }) {
-  const { user, logout } = useContext(AppContext);
+  const {
+    user, logout,
+    selectedYear, setSelectedYear,
+    selectedMonth, setSelectedMonth,
+    availableYears,
+  } = useContext(AppContext);
 
   if (!user) return <>{children}</>;
 
   const isAdmin = user.role === 'admin';
+  const isCurrentPeriod = selectedYear === CURRENT_YEAR && selectedMonth === CURRENT_MONTH;
 
   const menuItems = isAdmin
     ? [
@@ -23,6 +29,54 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
         { id: 'profile',   name: 'My Profile',         icon: 'person' },
       ];
 
+  // ── Shared Period Selector (used in both sidebar + mobile) ─────────────────
+  const PeriodSelector = ({ compact = false }) => (
+    <div className={`rounded-xl border border-slate-200 bg-slate-50 overflow-hidden ${compact ? '' : ''}`}>
+      {/* Header label */}
+      <div className="flex items-center justify-between px-3 pt-2 pb-2">
+        <div className="flex items-center ">
+
+          <label className="block text-[12px] font-bold text-on-surface-variant uppercase tracking-widest px-1 ">
+            Year
+          </label>
+          <div className="relative">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="w-full bg-transparent text-[13px] font-bold text-primary outline-none cursor-pointer px-1 appearance-none pr-6"
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>
+                  {y}{y === CURRENT_YEAR ? ' ●' : ''}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[14px] pointer-events-none">
+              expand_more
+            </span>
+          </div>
+        
+        </div>
+        {!isCurrentPeriod && (
+          <button
+            onClick={() => { setSelectedYear(CURRENT_YEAR); setSelectedMonth(CURRENT_MONTH); }}
+            className="text-[9px] font-bold text-primary bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full hover:bg-blue-100 transition-all"
+            title="Jump to current month"
+          >
+            Today
+          </button>
+        )}
+        {isCurrentPeriod && (
+          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+            Current
+          </span>
+        )}
+      </div>
+
+     
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
 
@@ -30,21 +84,17 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 fixed top-0 bottom-0 left-0 z-30 shadow-sm">
 
         {/* Brand header */}
-        <div className="px-5 py-6 border-b border-slate-100">
+        <div className="px-5 py-5 border-b border-slate-100">
           <div className="flex items-center gap-3 mb-4">
-            
+           
             <div>
-              <h2 className="text-lg font-extrabold text-on-surface leading-tight">Parthbhoomi</h2>
-              <p className="text-[13px] text-on-surface-variant font-medium leading-tight">CHS Maintenance</p>
+              <h2 className="text-base font-extrabold text-on-surface leading-tight">Parthbhoomi</h2>
+              <p className="text-[11px] text-on-surface-variant font-medium leading-tight">CHS Maintenance</p>
             </div>
           </div>
 
-          {/* Billing period chip */}
-          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5">
-            <span className="material-symbols-outlined text-primary text-sm">calendar_today</span>
-            <span className="text-[10px] font-bold text-primary">{CURRENT_MONTH} {CURRENT_YEAR}</span>
-            <span className="text-[9px] font-semibold text-blue-400 ml-auto">Active Period</span>
-          </div>
+          {/* Period selector */}
+          <PeriodSelector />
         </div>
 
         {/* Nav */}
@@ -65,15 +115,12 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
                   {item.icon}
                 </span>
                 <span>{item.name}</span>
-                {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
-                )}
               </button>
             );
           })}
         </nav>
 
-        {/* Role badge + logout */}
+        {/* User + logout */}
         <div className="p-4 border-t border-slate-100 space-y-3">
           <div className="flex items-center gap-2.5 px-1">
             <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
@@ -96,35 +143,71 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
         </div>
       </aside>
 
-      {/* ── MOBILE HEADER ─────────────────────────────────────────────────── */}
-      <header className="md:hidden sticky top-0 z-40 bg-white border-b border-slate-200 px-4 py-5 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          {/* <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-md">{isAdmin ? 'shield_person' : 'home_pin'}</span>
-          </div> */}
-          <div>
-            <h1 className="text-lg font-extrabold text-on-surface leading-tight">Parthbhoomi</h1>
-            <p className="text-[15px] text-on-surface-variant font-medium ">
-              {CURRENT_MONTH} {CURRENT_YEAR}
-            </p>
+      {/* ── MOBILE HEADER ──────────────────────────────────────────────────── */}
+      <header className="md:hidden sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          {/* Brand */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-[16px]">apartment</span>
+            </div>
+            <div>
+              <h1 className="text-sm font-extrabold text-on-surface leading-tight">Parthbhoomi</h1>
+              <p className="text-[10px] text-on-surface-variant font-medium leading-tight">CHS Maintenance</p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-md font-bold text-on-surface leading-tight">
+          {/* Mobile period selector — compact inline version */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-1 py-1 flex-1 max-w-[220px]">
+            <span className="material-symbols-outlined text-primary text-[15px] ml-1 flex-shrink-0">calendar_month</span>
+
+            {/* Month dropdown */}
+            <div className="relative flex-1">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full bg-transparent text-[12px] font-bold text-primary outline-none cursor-pointer appearance-none pr-4 py-0.5"
+              >
+                {ALL_MONTHS.map(m => (
+                  <option key={m} value={m}>{m.slice(0, 3)}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 text-[12px] pointer-events-none">
+                expand_more
+              </span>
+            </div>
+
+            <span className="text-slate-300 text-xs flex-shrink-0">|</span>
+
+            {/* Year dropdown */}
+            <div className="relative flex-shrink-0">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="bg-transparent text-[12px] font-bold text-primary outline-none cursor-pointer appearance-none pr-4 py-0.5"
+              >
+                {availableYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 text-[12px] pointer-events-none">
+                expand_more
+              </span>
+            </div>
+
+            {/* Current indicator dot */}
+            {isCurrentPeriod && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 mr-0.5" title="Current period" />
+            )}
+          </div>
+
+          {/* User info */}
+          <div className="text-right flex-shrink-0">
+            <p className="text-[11px] font-bold text-on-surface leading-tight">
               {isAdmin ? 'Admin' : `Unit ${user.username}`}
             </p>
-            <p className="text-[15px] text-on-surface-variant">{user.name}</p>
+            <p className="text-[10px] text-on-surface-variant truncate max-w-[80px]">{user.name.split(' ')[0]}</p>
           </div>
-          {/* <button
-            onClick={logout}
-            className="w-8 h-8 rounded-full bg-red-50 border border-red-200 text-error flex items-center justify-center transition-all active-scale"
-            title="Sign Out"
-            aria-label="Sign Out"
-          >
-            <span className="material-symbols-outlined text-sm">logout</span>
-          </button> */}
         </div>
       </header>
 
@@ -136,14 +219,14 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
             <button
               key={item.id}
               onClick={() => setCurrentTab(item.id)}
-              className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-150 active-scale min-w-0 flex-1 ${
+              className={`flex flex-col items-center justify-center px-2 py-1.5 rounded-xl transition-all duration-150 active-scale min-w-0 flex-1 ${
                 isActive ? 'text-primary' : 'text-on-surface-variant'
               }`}
             >
               <span className={`material-symbols-outlined text-xl ${isActive ? 'font-bold' : ''}`}>
                 {item.icon}
               </span>
-              <span className="text-[13px] font-bold mt-0.5 truncate max-w-full">
+              <span className="text-[10px] font-bold mt-0.5 truncate max-w-full">
                 {item.name
                   .replace('My ', '')
                   .replace(' Broadcaster', '')

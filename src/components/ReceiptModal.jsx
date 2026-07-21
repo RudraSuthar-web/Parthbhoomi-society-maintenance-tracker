@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CURRENT_YEAR, formatDate } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
 
 export default function ReceiptModal({ isOpen, onClose, receiptData }) {
   useEffect(() => {
@@ -14,7 +14,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
 
   if (!isOpen || !receiptData) return null;
 
-  const { tenementNumber, ownerName, month, amount, dateCleared, reference, method } = receiptData;
+  const { tenementNumber, ownerName, month, year, amount, dateCleared, reference, method } = receiptData;
 
   const handlePrint = () => window.print();
 
@@ -54,7 +54,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
             Parthbhoomi CHS
           </h2>
           <p className="text-xs text-blue-200 mt-1 font-medium">
-            Society Maintenance Receipt · FY {CURRENT_YEAR}
+            Society Maintenance Receipt · FY {year || ''}
           </p>
         </div>
 
@@ -65,7 +65,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
           <div className="text-center pb-4 border-b border-dashed border-slate-200">
             <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Amount Received</p>
             <p className="text-4xl font-extrabold text-on-surface mt-1 tracking-tight">
-              ₹{amount.toLocaleString('en-IN')}
+              ₹{(amount || 0).toLocaleString('en-IN')}
             </p>
             <div className="flex items-center justify-center gap-1.5 mt-2">
               <span className="material-symbols-outlined text-emerald-500 text-base">verified</span>
@@ -78,9 +78,9 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
             {[
               { label: 'Tenement No.',   value: `Unit ${tenementNumber}` },
               { label: 'Resident Name',  value: ownerName },
-              { label: 'For Month',      value: `${month} ${CURRENT_YEAR}` },
+              { label: 'For Month',      value: `${month} ${year || ''}`.trim() },
               { label: 'Cleared Date',   value: formatDate(dateCleared) },
-              { label: 'Transaction ID', value: reference, mono: true, highlight: true },
+              { label: 'Transaction ID', value: reference || 'N/A', mono: true, highlight: true },
               { label: 'Payment Mode',   value: method || 'Cheque / Cash' },
             ].map(({ label, value, mono, highlight }) => (
               <div key={label}>

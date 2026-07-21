@@ -1,10 +1,14 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import ReceiptModal from '../components/ReceiptModal';
-import { CURRENT_MONTH, CURRENT_YEAR, DUES_AMOUNT, formatDate, severityStyle } from '../utils/dateUtils';
+import { DUES_AMOUNT, formatDate } from '../utils/dateUtils';
 
 export default function ResidentDashboard({ currentTab }) {
-  const { user, tenements, notices, updateProfile } = useContext(AppContext);
+  const {
+    user, tenements, notices, updateProfile,
+    selectedYear, selectedMonth,
+    maintenanceAmount,
+  } = useContext(AppContext);
 
   const tenementData = tenements.find(t => t.tenementNumber === user?.username);
 
@@ -16,7 +20,6 @@ export default function ResidentDashboard({ currentTab }) {
   const [profileContact, setProfileContact] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError]     = useState('');
-  const [showPassword, setShowPassword]     = useState(false);
 
   useEffect(() => {
     if (tenementData) {
@@ -37,12 +40,20 @@ export default function ResidentDashboard({ currentTab }) {
     );
   }
 
-  // ── Computed stats ───────────────────────────────────────────────────────
-  const currentDue     = tenementData.dues.find(d => d.month === CURRENT_MONTH);
-  const totalPaid      = tenementData.dues.filter(d => d.status === 'Paid').length;
-  const totalUnpaid    = tenementData.dues.filter(d => d.status === 'Unpaid').length;
+  // ── Computed stats scoped to selectedYear ────────────────────────────────
+  const yearDues       = tenementData.dues.filter(d => d.year === selectedYear);
+  const currentDue     = yearDues.find(d => d.month === selectedMonth);
+  const totalPaid      = yearDues.filter(d => d.status === 'Paid').length;
+  const totalPartial   = yearDues.filter(d => d.status === 'Partial').length;
+  const totalUnpaid    = yearDues.filter(d => d.status === 'Unpaid').length;
   const isCurrentPaid  = currentDue?.status === 'Paid';
-  const yearlyAmount   = totalPaid * DUES_AMOUNT;
+  const isCurrentPartial = currentDue?.status === 'Partial';
+
+  // YTD amount = sum of amountPaid across paid + partial months in selected year
+  const yearlyAmountPaid = yearDues.reduce((acc, d) => {
+    if (d.status === 'Paid' || d.status === 'Partial') return acc + (d.amountPaid || d.amount || 0);
+    return acc;
+  }, 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const openReceipt = (monthDue) => {
@@ -50,7 +61,8 @@ export default function ResidentDashboard({ currentTab }) {
       tenementNumber: tenementData.tenementNumber,
       ownerName:      tenementData.ownerName,
       month:          monthDue.month,
-      amount:         monthDue.amount,
+      year:           monthDue.year || selectedYear,
+      amount:         monthDue.amountPaid || monthDue.amount,
       dateCleared:    monthDue.dateCleared,
       reference:      monthDue.reference,
       method:         monthDue.method,
@@ -108,12 +120,12 @@ export default function ResidentDashboard({ currentTab }) {
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-soft animate-fadeIn">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-emerald-600 text-xl">check_circle</span>
+              <span className="material-symbols-outlined text-emerald-600 text-xl">verified</span>
             </div>
             <div>
-              <h3 className="font-bold text-md text-emerald-800">Maintenance Paid — {CURRENT_MONTH} {CURRENT_YEAR}</h3>
+              <h3 className="font-bold text-md text-emerald-800">Maintenance Paid — {selectedMonth} {selectedYear}</h3>
               <p className="text-sm text-emerald-600 font-medium mt-0.5">
-                ₹{currentDue?.amount?.toLocaleString('en-IN')} cleared on{' '}
+                ₹{(currentDue?.amountPaid || currentDue?.amount)?.toLocaleString('en-IN')} cleared on{' '}
                 {formatDate(currentDue?.dateCleared)} · {currentDue?.method}
               </p>
             </div>
@@ -126,6 +138,31 @@ export default function ResidentDashboard({ currentTab }) {
             View Receipt
           </button>
         </div>
+      ) : isCurrentPartial ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-soft animate-fadeIn">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-amber-600 text-xl">pending</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-md text-amber-800">Partial Payment — {selectedMonth} {selectedYear}</h3>
+              <p className="text-sm text-amber-700 font-medium mt-0.5">
+                Paid: ₹{(currentDue?.amountPaid || 0).toLocaleString('en-IN')} of ₹{maintenanceAmount.toLocaleString('en-IN')} ·{' '}
+                Remaining: <span className="font-bold text-error">₹{(maintenanceAmount - (currentDue?.amountPaid || 0)).toLocaleString('en-IN')}</span>
+              </p>
+              {/* Mini progress */}
+              <div className="mt-2 h-1.5 w-48 bg-amber-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 rounded-full"
+                  style={{ width: `${((currentDue?.amountPaid || 0) / maintenanceAmount) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="px-4 py-2 bg-white border border-amber-300 text-amber-700 font-extrabold text-md rounded-lg shadow-sm text-center whitespace-nowrap">
+            Balance: ₹{(maintenanceAmount - (currentDue?.amountPaid || 0)).toLocaleString('en-IN')}
+          </div>
+        </div>
       ) : (
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-soft animate-fadeIn">
           <div className="flex items-start gap-3">
@@ -133,25 +170,25 @@ export default function ResidentDashboard({ currentTab }) {
               <span className="material-symbols-outlined text-error text-xl">warning</span>
             </div>
             <div>
-              <h3 className="font-bold text-md text-red-800">Maintenance Overdue — {CURRENT_MONTH} {CURRENT_YEAR}</h3>
+              <h3 className="font-bold text-md text-red-800">Maintenance Overdue — {selectedMonth} {selectedYear}</h3>
               <p className="text-md text-red-600 font-medium mt-0.5 leading-relaxed">
-                Amount due: <span className="font-bold text-[20px]">₹{currentDue?.amount?.toLocaleString('en-IN') ?? DUES_AMOUNT}</span>.<br></br>
+                Amount due: <span className="font-bold text-[20px]">₹{(currentDue?.amount ?? maintenanceAmount).toLocaleString('en-IN')}</span>.<br />
                 Please clear with the treasurer via Cheque, Cash, or Bank Transfer.
               </p>
             </div>
           </div>
           <div className="px-4 py-2 bg-white border border-red-300 text-error font-extrabold text-md rounded-lg shadow-sm text-center whitespace-nowrap">
-            Due: ₹{currentDue?.amount?.toLocaleString('en-IN') ?? DUES_AMOUNT}
+            Due: ₹{(currentDue?.amount ?? maintenanceAmount).toLocaleString('en-IN')}
           </div>
         </div>
       )}
 
-      {/* KPIs */}
+      {/* KPIs — scoped to selectedYear */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {[
-          { label: 'Months Paid', value: totalPaid, sub: 'of 12 this year', icon: 'check_circle', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Months Pending', value: totalUnpaid, sub: 'require attention', icon: 'hourglass_empty', color: 'text-error', bg: 'bg-red-50' },
-          { label: 'Amount Paid', value: `₹${(yearlyAmount / 1000).toFixed(1)}k`, sub: 'year to date', icon: 'payments', color: 'text-primary', bg: 'bg-blue-50' },
+          { label: 'Months Paid', value: totalPaid, sub: `of 12 in ${selectedYear}`, icon: 'verified', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Months Pending', value: totalUnpaid + totalPartial, sub: 'require attention', icon: 'hourglass_empty', color: 'text-error', bg: 'bg-red-50' },
+          { label: 'Amount Paid', value: `₹${(yearlyAmountPaid / 1000).toFixed(1)}k`, sub: `year ${selectedYear} to date`, icon: 'payments', color: 'text-primary', bg: 'bg-blue-50' },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-soft">
             <div className={`w-8 h-8 rounded-lg ${kpi.bg} flex items-center justify-center mb-2`}>
@@ -164,36 +201,38 @@ export default function ResidentDashboard({ currentTab }) {
         ))}
       </div>
 
-      {/* Yearly progress bar */}
+      {/* Yearly progress bar — scoped to selectedYear */}
       <div className="flex flex-col bg-white border border-slate-200 gap-3 rounded-xl shadow-soft p-5 ">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-title-lg font-bold text-on-surface">{CURRENT_YEAR} Payment Timeline</h3>
+          <h3 className="font-title-lg font-bold text-on-surface">{selectedYear} Payment Timeline</h3>
           <span className="text-sm font-bold text-primary bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
             {totalPaid}/12 Paid
           </span>
         </div>
         <div className="h-5 bg-slate-100 rounded-full overflow-hidden flex p-0.5 gap-0.5 border border-slate-200">
-          {tenementData.dues.map((due, idx) => {
+          {yearDues.map((due, idx) => {
             let color = 'bg-slate-200';
-            if (due.status === 'Paid')   color = 'bg-emerald-500';
-            if (due.status === 'Unpaid') color = 'bg-red-400';
+            if (due.status === 'Paid')    color = 'bg-emerald-500';
+            if (due.status === 'Partial') color = 'bg-amber-400';
+            if (due.status === 'Unpaid')  color = 'bg-red-400';
             return (
               <div
                 key={idx}
-                title={`${due.month}: ${due.status}`}
-                className={`flex-1 h-full rounded-sm transition-all duration-300 ${color} ${due.month === CURRENT_MONTH ? 'ring-1 ring-primary ring-offset-1' : ''}`}
+                title={`${due.month}: ${due.status}${due.status === 'Partial' ? ` (₹${due.amountPaid}/${maintenanceAmount})` : ''}`}
+                className={`flex-1 h-full rounded-sm transition-all duration-300 ${color} ${due.month === selectedMonth ? 'ring-1 ring-primary ring-offset-1' : ''}`}
               />
             );
           })}
         </div>
         <div className="flex justify-between text-[12px] text-on-surface-variant font-bold mt-1.5 px-0.5 uppercase tracking-wider">
-          <span>Jan {CURRENT_YEAR}</span>
+          <span>Jan {selectedYear}</span>
           <span>Jun</span>
-          <span>Dec {CURRENT_YEAR}</span>
+          <span>Dec {selectedYear}</span>
         </div>
         <div className="flex items-center gap-4 mt-3 flex-wrap text-xs">
           {[
             { color: 'bg-emerald-500', label: 'Paid' },
+            { color: 'bg-amber-400',   label: 'Partial' },
             { color: 'bg-red-400',     label: 'Unpaid' },
             { color: 'bg-slate-200',   label: 'Unbilled' },
           ].map(({ color, label }) => (
@@ -207,27 +246,32 @@ export default function ResidentDashboard({ currentTab }) {
 
       {/* Grid: mini ledger + bulletin */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Mini ledger */}
+        {/* Mini ledger — scoped to selectedYear */}
         <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-title-lg font-bold text-on-surface">Recent Dues</h3>
-            <span className="text-[15px] text-on-surface-variant font-semibold">Jan – Jul</span>
+            <span className="text-[15px] text-on-surface-variant font-semibold">Jan – Jul {selectedYear}</span>
           </div>
           <div className="space-y-2">
-            {tenementData.dues.slice(0, 7).map((due, idx) => (
+            {yearDues.slice(0, 7).map((due, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-100 transition-all"
               >
                 <div className="flex items-center gap-2.5">
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    due.status === 'Paid' ? 'bg-emerald-500'
+                     due.status === 'Partial' ? 'bg-amber-400'
                     : due.status === 'Unpaid' ? 'bg-error'
                     : 'bg-slate-300'
                   }`} />
                   <div>
-                    <p className="text-md font-bold text-on-surface">{due.month} {CURRENT_YEAR}</p>
-                    <p className="text-[13px] text-on-surface-variant font-semibold">₹{due.amount.toLocaleString('en-IN')}</p>
+                    <p className="text-md font-bold text-on-surface">{due.month} {selectedYear}</p>
+                    <p className="text-[13px] text-on-surface-variant font-semibold">
+                      {due.status === 'Partial'
+                        ? `₹${(due.amountPaid || 0).toLocaleString('en-IN')} / ₹${maintenanceAmount.toLocaleString('en-IN')}`
+                        : `₹${(due.amount || maintenanceAmount).toLocaleString('en-IN')}`
+                      }
+                    </p>
                   </div>
                 </div>
                 <div>
@@ -238,6 +282,8 @@ export default function ResidentDashboard({ currentTab }) {
                     >
                       Receipt
                     </button>
+                  ) : due.status === 'Partial' ? (
+                    <span className="text-[13px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-2 rounded-lg">Partial</span>
                   ) : due.status === 'Unpaid' ? (
                     <span className="text-[13px] font-bold text-error bg-red-50 border border-red-200 px-2.5 py-2 rounded-lg">Unpaid</span>
                   ) : (
@@ -257,7 +303,7 @@ export default function ResidentDashboard({ currentTab }) {
               {notices.length} notice{notices.length !== 1 ? 's' : ''}
             </span>
           </div>
-          <div className="space-y-2.5 max-h-[280px] overflow-y-auto thin-scrollbar pr-1">
+          <div className="space-y-2.5 overflow-y-auto thin-scrollbar pr-1">
             {notices.length === 0 ? (
               <div className="flex flex-col items-center py-8 gap-2">
                 <span className="material-symbols-outlined text-3xl text-slate-300">notifications_none</span>
@@ -265,16 +311,13 @@ export default function ResidentDashboard({ currentTab }) {
               </div>
             ) : (
               notices.map((notice) => {
-                const style = severityStyle(notice.severity);
                 return (
                   <div
                     key={notice.id}
-                    className="p-3 bg-slate-50 border-l-4 rounded-r-lg transition-all space-y-1"
-                    style={{ borderLeftColor: notice.severity === 'critical' ? '#ba1a1a' : notice.severity === 'warning' ? '#f59e0b' : '#004ac6' }}
+                    className="p-3 bg-slate-50 rounded-lg border border-slate-200 transition-all space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[12px] font-bold uppercase text-on-surface-variant">{notice.date}</span>
-                      <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${style.badge}`}>{notice.severity}</span>
                     </div>
                     <h4 className="font-bold text-md text-on-surface leading-snug">{notice.title}</h4>
                     <p className="text-sm text-on-surface-variant leading-relaxed line-clamp-2">{notice.content}</p>
@@ -288,35 +331,38 @@ export default function ResidentDashboard({ currentTab }) {
     </div>
   );
 
-  // ── Ledger Tab ──────────────────────────────────────────────────────────
+  // ── Ledger Tab — scoped to selectedYear ──────────────────────────────────
   const renderLedgerView = () => (
     <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-5 animate-fadeIn">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-headline-md text-on-surface font-extrabold">Transaction Ledger</h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Chronological maintenance record for FY {CURRENT_YEAR} — Unit {tenementData.tenementNumber}
+            Maintenance record for FY {selectedYear} — Unit {tenementData.tenementNumber}
           </p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD Paid</p>
-          <p className="text-lg font-extrabold text-primary">₹{yearlyAmount.toLocaleString('en-IN')}</p>
+          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD Paid ({selectedYear})</p>
+          <p className="text-lg font-extrabold text-primary">₹{yearlyAmountPaid.toLocaleString('en-IN')}</p>
         </div>
       </div>
 
       <div className="space-y-2">
-        {tenementData.dues.map((due, idx) => {
+        {yearDues.map((due, idx) => {
           const isExpanded = expandedIdx === idx;
           const isPaid     = due.status === 'Paid';
+          const isPartial  = due.status === 'Partial';
           const isUnpaid   = due.status === 'Unpaid';
           const isUnbilled = due.status === 'Unbilled';
-          const isCurrent  = due.month === CURRENT_MONTH;
+          const isCurrent  = due.month === selectedMonth;
+          const installments = due.installments || [];
 
           return (
             <div
               key={idx}
               className={`border-l-4 border rounded-xl overflow-hidden transition-all duration-200 ${
                 isPaid    ? 'border-l-emerald-500 border-slate-200 bg-white'
+                : isPartial ? 'border-l-amber-400 border-slate-200 bg-white'
                 : isUnpaid ? 'border-l-error border-slate-200 bg-white'
                 :            'border-l-slate-200 border-slate-200 bg-slate-50/50'
               } ${isCurrent ? 'ring-1 ring-primary/20' : ''}`}
@@ -333,21 +379,26 @@ export default function ResidentDashboard({ currentTab }) {
                 <div className="flex items-center gap-3">
                   <span className={`material-symbols-outlined text-xl ${
                     isPaid    ? 'text-emerald-500'
+                    : isPartial ? 'text-amber-500'
                     : isUnpaid ? 'text-error'
                     :            'text-slate-300'
                   }`}>
-                    {isPaid ? 'check_circle' : isUnpaid ? 'cancel' : 'schedule'}
+                    {isPaid ? 'verified' : isPartial ? 'pending' : isUnpaid ? 'cancel' : 'schedule'}
                   </span>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-on-surface">{due.month} {CURRENT_YEAR}</h4>
+                      <h4 className="text-sm font-bold text-on-surface">{due.month} {selectedYear}</h4>
                       {isCurrent && (
                         <span className="text-[9px] font-bold text-primary bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full uppercase">Current</span>
                       )}
                     </div>
                     <p className="text-[11px] text-on-surface-variant font-semibold">
-                      ₹{due.amount.toLocaleString('en-IN')}
-                      {isPaid && due.method ? ` · ${due.method}` : ''}
+                      {isPaid
+                        ? `₹${(due.amountPaid || due.amount).toLocaleString('en-IN')} · ${due.method}`
+                        : isPartial
+                        ? `₹${(due.amountPaid || 0).toLocaleString('en-IN')} paid of ₹${maintenanceAmount.toLocaleString('en-IN')}`
+                        : `₹${(due.amount || maintenanceAmount).toLocaleString('en-IN')}`
+                      }
                     </p>
                   </div>
                 </div>
@@ -355,6 +406,7 @@ export default function ResidentDashboard({ currentTab }) {
                 <div className="flex items-center gap-3">
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
                     isPaid    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : isPartial ? 'bg-amber-50 text-amber-700 border border-amber-200'
                     : isUnpaid ? 'bg-red-50 text-error border border-red-200'
                     :            'bg-slate-100 text-slate-500 border border-slate-200'
                   }`}>
@@ -370,34 +422,51 @@ export default function ResidentDashboard({ currentTab }) {
 
               {isExpanded && !isUnbilled && (
                 <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/50 animate-fadeIn">
-                  {isPaid ? (
+                  {(isPaid || isPartial) ? (
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                        {[
-                          { label: 'Cleared Date',    value: formatDate(due.dateCleared) },
-                          { label: 'Reference ID',    value: due.reference, mono: true },
-                          { label: 'Payment Method',  value: due.method },
-                          { label: 'Amount',          value: `₹${due.amount.toLocaleString('en-IN')}` },
-                        ].map(({ label, value, mono }) => (
-                          <div key={label}>
-                            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{label}</p>
-                            <p className={`font-semibold text-on-surface mt-0.5 ${mono ? 'font-mono text-primary' : ''}`}>{value}</p>
+                      <div className="space-y-3 w-full">
+                        {/* Installments history */}
+                        {installments.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                              Payment History ({installments.length} installment{installments.length !== 1 ? 's' : ''})
+                            </p>
+                            <div className="space-y-1.5">
+                              {installments.map((inst, i) => (
+                                <div key={i} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-emerald-500 text-sm">verified</span>
+                                    <span className="font-semibold text-on-surface">{formatDate(inst.date)}</span>
+                                    <span className="text-on-surface-variant">· {inst.method}</span>
+                                    {inst.reference && <span className="font-mono text-primary text-[10px]">{inst.reference}</span>}
+                                  </div>
+                                  <span className="font-bold text-emerald-700">+₹{inst.amount.toLocaleString('en-IN')}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {isPartial && (
+                              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex justify-between text-xs font-bold">
+                                <span className="text-amber-700">Remaining balance</span>
+                                <span className="text-error">₹{(maintenanceAmount - (due.amountPaid || 0)).toLocaleString('en-IN')}</span>
+                              </div>
+                            )}
                           </div>
-                        ))}
+                        )}
+                        {isPaid && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openReceipt(due); }}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale whitespace-nowrap"
+                          >
+                            Download Receipt
+                          </button>
+                        )}
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openReceipt(due); }}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale whitespace-nowrap"
-                      >
-                        <span className="material-symbols-outlined text-sm">receipt_long</span>
-                        Download Receipt
-                      </button>
                     </div>
                   ) : (
                     <div className="space-y-2 text-xs">
                       <p className="text-on-surface-variant leading-relaxed">
                         <span className="font-bold text-error">Overdue:</span> Please submit{' '}
-                        <span className="font-bold text-on-surface">₹{due.amount.toLocaleString('en-IN')}</span> to the
+                        <span className="font-bold text-on-surface">₹{(due.amount || maintenanceAmount).toLocaleString('en-IN')}</span> to the
                         society treasurer's desk. Accepted modes: Cheque, Cash, or Bank Transfer (NEFT/UPI on request).
                       </p>
                       <div className="bg-red-50 border border-red-200 text-error p-2.5 rounded-lg font-semibold">
@@ -432,25 +501,19 @@ export default function ResidentDashboard({ currentTab }) {
       ) : (
         <div className="space-y-4">
           {notices.map((notice) => {
-            const style = severityStyle(notice.severity);
             return (
               <div
                 key={notice.id}
-                className="p-5 bg-slate-50 border-l-4 rounded-r-xl border border-slate-200 space-y-3 hover:bg-white transition-all"
-                style={{ borderLeftColor: notice.severity === 'critical' ? '#ba1a1a' : notice.severity === 'warning' ? '#f59e0b' : '#004ac6' }}
+                className="p-5 bg-slate-50 border rounded-xl border-slate-200 space-y-3 hover:bg-white transition-all"
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <span className={`material-symbols-outlined text-lg ${style.iconColor}`}>{style.icon}</span>
-                    <span className="text-xs font-bold text-on-surface-variant">{notice.date}</span>
+                    <span className="text-sm font-bold text-on-surface-variant">{notice.date}</span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${style.badge}`}>
-                    {notice.severity}
-                  </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-on-surface">{notice.title}</h3>
-                  <p className="text-sm text-on-surface-variant leading-relaxed font-medium mt-1 whitespace-pre-wrap">{notice.content}</p>
+                  <h3 className="font-bold text-md text-on-surface">{notice.title}</h3>
+                  <p className="text-md text-on-surface-variant leading-relaxed font-medium mt-1 whitespace-pre-wrap">{notice.content}</p>
                 </div>
               </div>
             );
@@ -483,7 +546,7 @@ export default function ResidentDashboard({ currentTab }) {
 
         {profileSuccess && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3.5 rounded-lg flex items-center gap-2 animate-fadeIn">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
+            <span className="material-symbols-outlined text-sm">verified</span>
             {profileSuccess}
           </div>
         )}

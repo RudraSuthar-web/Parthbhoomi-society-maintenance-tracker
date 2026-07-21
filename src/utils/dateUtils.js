@@ -48,29 +48,4 @@ export const formatDate = (dateStr) => {
   }
 };
 
-/**
- * Returns a severity badge class set.
- * @param {'info'|'warning'|'critical'} severity
- */
-export const severityStyle = (severity) => {
-  switch (severity) {
-    case 'critical': return {
-      badge: 'bg-red-50 text-error border border-red-200',
-      bar: 'bg-error',
-      icon: 'warning',
-      iconColor: 'text-error',
-    };
-    case 'warning': return {
-      badge: 'bg-amber-50 text-amber-700 border border-amber-200',
-      bar: 'bg-amber-500',
-      icon: 'error',
-      iconColor: 'text-amber-600',
-    };
-    default: return {
-      badge: 'bg-blue-50 text-blue-700 border border-blue-200',
-      bar: 'bg-primary',
-      icon: 'info',
-      iconColor: 'text-primary',
-    };
-  }
-};
+

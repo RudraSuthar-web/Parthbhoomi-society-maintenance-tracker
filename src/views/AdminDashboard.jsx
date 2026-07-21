@@ -3,16 +3,19 @@ import { AppContext } from '../context/AppContext';
 import ReceiptModal from '../components/ReceiptModal';
 import TenementModal from '../components/TenementModal';
 import MonthlyGridView from './MonthlyGridView';
-import { CURRENT_MONTH, CURRENT_YEAR, DUES_AMOUNT, severityStyle } from '../utils/dateUtils';
+import { DUES_AMOUNT } from '../utils/dateUtils';
 
 export default function AdminDashboard({ currentTab }) {
-  const { tenements, notices, togglePaymentStatus, addNotice, deleteNotice, registerTenement } = useContext(AppContext);
+  const {
+    tenements, notices, addInstallment, revertPayment, togglePaymentStatus,
+    addNotice, deleteNotice, registerTenement,
+    selectedYear, selectedMonth,
+    maintenanceAmount, setMaintenanceAmount,
+  } = useContext(AppContext);
 
   // ── Modal state ────────────────────────────────────────────────────────────
-  // Single selected tenement number — drives TenementModal from any location
   const [activeTenementNum, setActiveTenementNum] = useState(null);
   const activeTenement = tenements.find(t => t.tenementNumber === activeTenementNum) ?? null;
-
   const openTenement = useCallback((num) => setActiveTenementNum(num), []);
   const closeTenement = useCallback(() => setActiveTenementNum(null), []);
 
@@ -21,7 +24,6 @@ export default function AdminDashboard({ currentTab }) {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
-  const [noticeSeverity, setNoticeSeverity] = useState('info');
   const [noticeSuccessMsg, setNoticeSuccessMsg] = useState('');
 
   // Admin Register Tenement
@@ -32,43 +34,76 @@ export default function AdminDashboard({ currentTab }) {
   const [adminRegError, setAdminRegError] = useState('');
   const [adminRegSuccess, setAdminRegSuccess] = useState('');
 
-  // Payment method modal (inside TenementModal flow)
-  const [paymentToggleState, setPaymentToggleState] = useState(null);
+  // Installment payment modal state
+  const [paymentToggleState, setPaymentToggleState] = useState(null); // { tenementNumber, month, year, currentInstallments, amountPaid }
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
 
   // Receipt modal
   const [receiptData, setReceiptData] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
-  // Tenement search (directory tab)
+  // Settings
+  const [settingsAmount, setSettingsAmount] = useState(String(maintenanceAmount));
+  const [settingsSuccess, setSettingsSuccess] = useState('');
+  const [settingsError, setSettingsError] = useState('');
+
+  // Tenement search
   const [searchQuery, setSearchQuery] = useState('');
 
   // ── Computed stats ──────────────────────────────────────────────────────────
   const totalTenementsCount = tenements.length;
 
   const currentMonthPaid = tenements.filter(t =>
-    t.dues.find(d => d.month === CURRENT_MONTH)?.status === 'Paid'
+    t.dues.find(d => d.month === selectedMonth && d.year === selectedYear)?.status === 'Paid'
   );
-  const currentMonthUnpaid = tenements.filter(t =>
-    t.dues.find(d => d.month === CURRENT_MONTH)?.status === 'Unpaid'
-  );
+  const currentMonthUnpaid = tenements.filter(t => {
+    const s = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear)?.status;
+    return s === 'Unpaid' || s === 'Partial';
+  });
 
-  const totalCollectedThisMonth = currentMonthPaid.length * DUES_AMOUNT;
-  const totalPendingThisMonth = currentMonthUnpaid.length * DUES_AMOUNT;
+  const totalCollectedThisMonth = currentMonthPaid.reduce((acc, t) =>
+    acc + (t.dues.find(d => d.month === selectedMonth && d.year === selectedYear)?.amountPaid || maintenanceAmount), 0);
+  // Also add partial amounts
+  const totalPartialThisMonth = tenements.reduce((acc, t) => {
+    const due = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
+    if (due?.status === 'Partial') return acc + (due.amountPaid || 0);
+    return acc;
+  }, 0);
+  const totalCollectedDisplay = totalCollectedThisMonth + totalPartialThisMonth;
+
+  const totalPendingThisMonth = currentMonthUnpaid.reduce((acc, t) => {
+    const due = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
+    const remaining = maintenanceAmount - (due?.amountPaid || 0);
+    return acc + remaining;
+  }, 0);
+
   const collectionRate = totalTenementsCount > 0
     ? ((currentMonthPaid.length / totalTenementsCount) * 100).toFixed(0)
     : '0';
 
-  // Defaulters = unpaid this month (full tenement objects)
   const defaulterTenements = currentMonthUnpaid;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    const val = Number(settingsAmount);
+    if (!val || val < 1) {
+      setSettingsError('Please enter a valid amount greater than 0.');
+      return;
+    }
+    setMaintenanceAmount(val);
+    setSettingsSuccess(`Maintenance amount updated to ₹${val.toLocaleString('en-IN')}!`);
+    setSettingsError('');
+    setTimeout(() => setSettingsSuccess(''), 3000);
+  };
+
   const handleBroadcastNotice = (e) => {
     e.preventDefault();
     if (!noticeTitle.trim() || !noticeContent.trim()) return;
-    addNotice(noticeTitle, noticeContent, noticeSeverity);
+    addNotice(noticeTitle, noticeContent);
     setNoticeTitle('');
     setNoticeContent('');
-    setNoticeSeverity('info');
     setNoticeSuccessMsg('Notice broadcasted successfully!');
     setTimeout(() => {
       setNoticeSuccessMsg('');
@@ -111,30 +146,53 @@ export default function AdminDashboard({ currentTab }) {
       tenementNumber: tenement.tenementNumber,
       ownerName: tenement.ownerName,
       month: monthDue.month,
-      amount: monthDue.amount,
+      year: monthDue.year || selectedYear,
+      amount: monthDue.amountPaid || monthDue.amount,
       dateCleared: monthDue.dateCleared,
       reference: monthDue.reference,
       method: monthDue.method,
     });
     setIsReceiptOpen(true);
-  }, []);
+  }, [selectedYear]);
 
   // Called from TenementModal cells
-  const handleTogglePayment = useCallback((tenementNumber, month, currentStatus) => {
-    if (currentStatus === 'Paid') {
-      if (window.confirm(`Revert ${month} for Unit ${tenementNumber} to Unpaid?`)) {
-        togglePaymentStatus(tenementNumber, month);
+  const handleTogglePayment = useCallback((tenementNumber, month, currentStatus, year) => {
+    const resolvedYear = year || selectedYear;
+    if (currentStatus === 'Paid' || currentStatus === 'Partial') {
+      if (window.confirm(`Revert ${month} for Unit ${tenementNumber} to Unpaid? This will clear all installments.`)) {
+        revertPayment(tenementNumber, month, resolvedYear);
       }
     } else if (currentStatus === 'Unpaid') {
-      setPaymentToggleState({ tenementNumber, month });
+      const tenement = tenements.find(t => t.tenementNumber === tenementNumber);
+      const due = tenement?.dues.find(d => d.month === month && d.year === resolvedYear);
+      const currentInstallments = due?.installments || [];
+      const amountPaid = due?.amountPaid || 0;
+      setPaymentAmount(String(maintenanceAmount - amountPaid));
+      setPaymentReference('');
+      setPaymentToggleState({ tenementNumber, month, year: resolvedYear, currentInstallments, amountPaid });
     }
-  }, [togglePaymentStatus]);
+  }, [revertPayment, tenements, selectedYear, maintenanceAmount]);
 
   const confirmPaymentToggle = (method) => {
-    if (paymentToggleState) {
-      togglePaymentStatus(paymentToggleState.tenementNumber, paymentToggleState.month, method);
-      setPaymentToggleState(null);
-    }
+    if (!paymentToggleState) return;
+    const amount = Number(paymentAmount);
+    if (!amount || amount <= 0) return;
+    const today = new Date();
+    const randomRef = 'TXN' + Math.floor(10000 + Math.random() * 90000);
+    addInstallment(
+      paymentToggleState.tenementNumber,
+      paymentToggleState.month,
+      {
+        amount,
+        date: today.toISOString().split('T')[0],
+        reference: paymentReference || randomRef,
+        method,
+      },
+      paymentToggleState.year
+    );
+    setPaymentToggleState(null);
+    setPaymentAmount('');
+    setPaymentReference('');
   };
 
   const filteredTenements = tenements
@@ -154,13 +212,59 @@ export default function AdminDashboard({ currentTab }) {
           <h2 className="font-display-lg text-on-surface">Society Overview</h2>
           <p className="text-xs text-on-surface-variant mt-1">
             Maintenance fund summary for{' '}
-            <span className="font-bold text-on-surface">{CURRENT_MONTH} {CURRENT_YEAR}</span>
+            <span className="font-bold text-on-surface">{selectedMonth} {selectedYear}</span>
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg flex-shrink-0">
           <span className="material-symbols-outlined text-primary text-sm">calendar_today</span>
-          <span className="text-xs font-bold text-primary">{CURRENT_MONTH} {CURRENT_YEAR}</span>
+          <span className="text-xs font-bold text-primary">{selectedMonth} {selectedYear}</span>
         </div>
+      </div>
+
+      {/* Settings — Maintenance Amount */}
+      <div className="bg-white border border-amber-200 rounded-xl shadow-soft p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-amber-600 text-[18px]">tune</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-on-surface">Global Maintenance Amount</h3>
+              <p className="text-xs text-on-surface-variant">Currently: <span className="font-bold text-amber-700">₹{maintenanceAmount.toLocaleString('en-IN')}</span> / month</p>
+            </div>
+          </div>
+          <form onSubmit={handleSaveSettings} className="flex items-center gap-2">
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">₹</span>
+              <input
+                type="number"
+                value={settingsAmount}
+                onChange={(e) => setSettingsAmount(e.target.value)}
+                className="pl-6 pr-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-amber-400 transition-all w-28"
+                min="1"
+                placeholder="1200"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition-all active-scale"
+            >
+              Update
+            </button>
+          </form>
+        </div>
+        {settingsSuccess && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-2.5 rounded-lg flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">verified</span>
+            {settingsSuccess}
+          </div>
+        )}
+        {settingsError && (
+          <div className="bg-red-50 border border-red-200 text-error text-xs font-semibold p-2.5 rounded-lg flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">error</span>
+            {settingsError}
+          </div>
+        )}
       </div>
 
       {/* KPI row */}
@@ -169,7 +273,7 @@ export default function AdminDashboard({ currentTab }) {
         <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
-              {CURRENT_MONTH} Collection
+              {selectedMonth} Collection
             </span>
             <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
               <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
@@ -177,12 +281,12 @@ export default function AdminDashboard({ currentTab }) {
           </div>
           <div>
             <h3 className="text-3xl font-extrabold text-on-surface tracking-tight">
-              ₹{totalCollectedThisMonth.toLocaleString('en-IN')}
+              ₹{totalCollectedDisplay.toLocaleString('en-IN')}
             </h3>
             <div className="mt-3">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-on-surface-variant font-semibold">
-                  {currentMonthPaid.length}/{totalTenementsCount} tenements
+                  {currentMonthPaid.length}/{totalTenementsCount} fully paid
                 </span>
                 <span className="text-xs font-bold text-emerald-600">{collectionRate}%</span>
               </div>
@@ -212,7 +316,7 @@ export default function AdminDashboard({ currentTab }) {
             </h3>
             <p className="text-sm text-on-surface-variant font-semibold mt-2">
               <span className="font-bold text-on-surface">{currentMonthUnpaid.length}</span>{' '}
-              tenement{currentMonthUnpaid.length !== 1 ? 's' : ''} yet to pay for {CURRENT_MONTH}
+              tenement{currentMonthUnpaid.length !== 1 ? 's' : ''} yet to fully pay for {selectedMonth}
             </p>
           </div>
         </div>
@@ -220,58 +324,60 @@ export default function AdminDashboard({ currentTab }) {
 
       {/* ── Defaulters Grid ── */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-soft ">
-        {defaulterTenements.length === 0 ? 
+        {defaulterTenements.length === 0 ?
           (<div className="flex items-center bg-emerald-500 rounded-xl p-3 justify-between">
             <div className="flex gap-2 items-center">
-<span className="material-symbols-outlined text-white">verified</span>
-            <h3 className="font-title-lg font-bold text-white"> 
- All {totalTenementsCount} tenements have paid</h3></div>
-            <h3 className="font-title-lg font-bold text-white"> {CURRENT_MONTH} - {CURRENT_YEAR} </h3>
+              <span className="material-symbols-outlined text-white">verified</span>
+              <h3 className="font-title-lg font-bold text-white">
+                All {totalTenementsCount} tenements have paid</h3></div>
+            <h3 className="font-title-lg font-bold text-white"> {selectedMonth} - {selectedYear} </h3>
 
           </div>) : (<div className="flex items-center bg-error rounded-t-xl p-3 justify-between">
 
-          <h3 className="font-title-lg font-bold text-white"><span className="font-bold text-on-surface text-white text-[20px]">{defaulterTenements.length}</span> Unpaid</h3>
-          <h3 className="font-title-lg font-bold text-white"> {CURRENT_MONTH} - {CURRENT_YEAR} </h3>
+            <h3 className="font-title-lg font-bold text-white"><span className="font-bold text-on-surface text-white text-[20px]">{defaulterTenements.length}</span> Unpaid / Partial</h3>
+            <h3 className="font-title-lg font-bold text-white"> {selectedMonth} - {selectedYear} </h3>
 
-        </div>)}
-
-
+          </div>)}
 
         {defaulterTenements.length != 0 && (
-          /* Number-only grid: 3 cols mobile → 6 cols large */
           <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-3 p-6">
-            {defaulterTenements.map((t) => (
-              <button
-                key={t.tenementNumber}
-                onClick={() => openTenement(t.tenementNumber)}
-                className="
-                  group relative aspect-square flex flex-col items-center justify-center
-                  bg-red-50 border-2 border-red-200 rounded-2xl
-                  hover:bg-red-100 hover:border-error hover:shadow-lg hover:shadow-red-100
-                  active:scale-95 transition-all duration-150 cursor-pointer
-                  focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2
-                "
-                aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — Unpaid`}
-                title={`${t.ownerName} · Tap to view`}
-              >
-
-                {/* Unit number */}
-                <span className="text-2xl sm:text-3xl font-extrabold text-error leading-none">
-                  {t.tenementNumber}
-                </span>
-
-
-                {/* Hover label */}
-                <span className="
-                  absolute bottom-0 left-0 right-0 bg-black/50 text-white
-                  text-[15px] font-bold text-center py-1 rounded-b-xl
-                  opacity-0 group-hover:opacity-100 transition-opacity duration-150
-                  truncate px-1
-                ">
-                  {t.ownerName.split(' ')[0]}
-                </span>
-              </button>
-            ))}
+            {defaulterTenements.map((t) => {
+              const due = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
+              const isPartial = due?.status === 'Partial';
+              return (
+                <button
+                  key={t.tenementNumber}
+                  onClick={() => openTenement(t.tenementNumber)}
+                  className={`
+                    group relative aspect-square flex flex-col items-center justify-center
+                    border-2 rounded-2xl
+                    active:scale-95 transition-all duration-150 cursor-pointer
+                    focus:outline-none focus:ring-2 focus:ring-offset-2
+                    ${isPartial
+                      ? 'bg-amber-50 border-amber-300 hover:bg-amber-100 hover:border-amber-500 focus:ring-amber-400'
+                      : 'bg-red-50 border-red-200 hover:bg-red-100 hover:border-error hover:shadow-lg hover:shadow-red-100 focus:ring-error'
+                    }
+                  `}
+                  aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
+                  title={`${t.ownerName} · ${due?.status} · Tap to view`}
+                >
+                  <span className={`text-2xl sm:text-3xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
+                    {t.tenementNumber}
+                  </span>
+                  {isPartial && (
+                    <span className="text-[8px] font-bold text-amber-600 uppercase">Partial</span>
+                  )}
+                  <span className="
+                    absolute bottom-0 left-0 right-0 bg-black/50 text-white
+                    text-[15px] font-bold text-center py-1 rounded-b-xl
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                    truncate px-1
+                  ">
+                    {t.ownerName.split(' ')[0]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -289,12 +395,10 @@ export default function AdminDashboard({ currentTab }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {notices.slice(0, 3).map((notice) => {
-              const style = severityStyle(notice.severity);
               return (
                 <div key={notice.id} className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-[12px] font-bold uppercase text-on-surface-variant">{notice.date}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${style.badge}`}>{notice.severity}</span>
                   </div>
                   <h4 className="font-bold text-[15px] text-on-surface leading-tight truncate">{notice.title}</h4>
                   <p className="text-[13px] text-on-surface-variant line-clamp-2 leading-relaxed">{notice.content}</p>
@@ -308,8 +412,6 @@ export default function AdminDashboard({ currentTab }) {
   );
 
   // ── Tenements Tab ───────────────────────────────────────────────────────────
-  // Each tenement is a clickable card (no accordion / expand).
-  // Clicking any card opens TenementModal for that unit.
   const renderTenements = () => (
     <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-5 animate-fadeIn">
 
@@ -318,7 +420,7 @@ export default function AdminDashboard({ currentTab }) {
         <div>
           <h2 className="font-headline-md text-on-surface font-extrabold">Tenement Directory</h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Tap any unit to view full ledger & manage payments · {CURRENT_MONTH} {CURRENT_YEAR}
+            Tap any unit to view full ledger & manage payments · {selectedMonth} {selectedYear}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -368,7 +470,7 @@ export default function AdminDashboard({ currentTab }) {
           )}
           {adminRegSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3 rounded-lg flex items-start gap-2">
-              <span className="material-symbols-outlined text-sm mt-0.5">check_circle</span>
+              <span className="material-symbols-outlined text-sm mt-0.5">verified</span>
               {adminRegSuccess}
             </div>
           )}
@@ -404,7 +506,7 @@ export default function AdminDashboard({ currentTab }) {
         </p>
       )}
 
-      {/* ── Tenement grid — each card opens modal on click, NO accordion ── */}
+      {/* Tenement grid */}
       {filteredTenements.length === 0 ? (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-4xl text-slate-300">search_off</span>
@@ -413,11 +515,12 @@ export default function AdminDashboard({ currentTab }) {
       ) : (
         <div className="space-y-3">
           {filteredTenements.map((tenement) => {
-            const currentDue = tenement.dues.find(d => d.month === CURRENT_MONTH);
-            const paidCount = tenement.dues.filter(d => d.status === 'Paid').length;
-            const unpaidCount = tenement.dues.filter(d => d.status === 'Unpaid').length;
+            const currentDue = tenement.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
+            const paidCount = tenement.dues.filter(d => d.status === 'Paid' && d.year === selectedYear).length;
+            const unpaidCount = tenement.dues.filter(d => (d.status === 'Unpaid' || d.status === 'Partial') && d.year === selectedYear).length;
             const isPaid = currentDue?.status === 'Paid';
             const isUnpaid = currentDue?.status === 'Unpaid';
+            const isPartial = currentDue?.status === 'Partial';
 
             return (
               <button
@@ -430,14 +533,19 @@ export default function AdminDashboard({ currentTab }) {
                   focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1
                   ${isUnpaid
                     ? 'bg-red-50 border-red-200 hover:border-red-300'
+                    : isPartial
+                    ? 'bg-amber-50 border-amber-200 hover:border-amber-300'
                     : 'bg-white border-slate-200 hover:border-slate-300'
                   }
                 `}
                 aria-label={`Unit ${tenement.tenementNumber} — ${tenement.ownerName}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm flex-shrink-0 shadow-sm ${isUnpaid ? 'bg-error text-white' : 'bg-primary text-white'
-                    }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm flex-shrink-0 shadow-sm ${
+                    isUnpaid ? 'bg-error text-white'
+                    : isPartial ? 'bg-amber-500 text-white'
+                    : 'bg-primary text-white'
+                  }`}>
                     {tenement.tenementNumber}
                   </div>
                   <div className="text-left">
@@ -449,18 +557,21 @@ export default function AdminDashboard({ currentTab }) {
                 <div className="flex items-center gap-4 sm:gap-6">
                   {/* Current month badge */}
                   <div className="text-right hidden sm:block">
-                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">{CURRENT_MONTH}</span>
-                    <span className={`text-[11px] font-bold flex items-center justify-end gap-0.5 mt-0.5 ${isPaid ? 'text-emerald-600' : isUnpaid ? 'text-error' : 'text-slate-500'}`}>
+                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">{selectedMonth}</span>
+                    <span className={`text-[11px] font-bold flex items-center justify-end gap-0.5 mt-0.5 ${isPaid ? 'text-emerald-600' : isPartial ? 'text-amber-600' : isUnpaid ? 'text-error' : 'text-slate-500'}`}>
                       <span className="material-symbols-outlined text-xs">
-                        {isPaid ? 'check_circle' : isUnpaid ? 'cancel' : 'schedule'}
+                        {isPaid ? 'verified' : isPartial ? 'pending' : isUnpaid ? 'cancel' : 'schedule'}
                       </span>
                       {currentDue?.status ?? 'N/A'}
+                      {isPartial && currentDue && (
+                        <span className="text-[9px] ml-1">(₹{(currentDue.amountPaid || 0).toLocaleString('en-IN')}/₹{maintenanceAmount.toLocaleString('en-IN')})</span>
+                      )}
                     </span>
                   </div>
 
                   {/* Yearly progress */}
                   <div className="text-right hidden md:block">
-                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Year</span>
+                    <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Year {selectedYear}</span>
                     <span className={`text-xs font-bold ${paidCount === 12 ? 'text-emerald-600' : 'text-primary'}`}>{paidCount}/12 paid</span>
                     {unpaidCount > 0 && (
                       <span className="text-[10px] font-bold text-error block">{unpaidCount} overdue</span>
@@ -506,7 +617,6 @@ export default function AdminDashboard({ currentTab }) {
             <p className="text-sm text-on-surface-variant mt-2 font-medium">No notices published yet.</p>
           </div>
         ) : notices.map((notice) => {
-          const style = severityStyle(notice.severity);
           return (
             <div
               key={notice.id}
@@ -514,13 +624,9 @@ export default function AdminDashboard({ currentTab }) {
               onClick={() => setSelectedNotice(notice)}
             >
               <div className="flex gap-3 flex-1 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${style.badge}`}>
-                  <span className={`material-symbols-outlined text-sm ${style.iconColor}`}>{style.icon}</span>
-                </div>
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] text-on-surface-variant font-bold">{notice.date}</span>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${style.badge}`}>{notice.severity}</span>
                   </div>
                   <h4 className="font-bold text-xs text-on-surface leading-tight group-hover:text-primary transition-colors">{notice.title}</h4>
                   <p className="text-[11px] sm:text-xs text-on-surface-variant leading-relaxed font-medium line-clamp-2">{notice.content}</p>
@@ -551,7 +657,7 @@ export default function AdminDashboard({ currentTab }) {
       {currentTab === 'monthly-grid' && <MonthlyGridView />}
       {currentTab === 'notices' && renderNoticeBroadcaster()}
 
-      {/* ── Tenement Detail Modal (shared across all tabs) ── */}
+      {/* ── Tenement Detail Modal ── */}
       {activeTenement && (
         <TenementModal
           tenement={activeTenement}
@@ -561,51 +667,119 @@ export default function AdminDashboard({ currentTab }) {
         />
       )}
 
-      {/* ── Payment Method Modal (triggered from TenementModal) ── */}
-      {paymentToggleState && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={() => setPaymentToggleState(null)}
-        >
+      {/* ── Installment Payment Modal ── */}
+      {paymentToggleState && (() => {
+        const remaining = maintenanceAmount - (paymentToggleState.amountPaid || 0);
+        const existingInstallments = paymentToggleState.currentInstallments || [];
+        return (
           <div
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 space-y-5 animate-scaleIn"
-            onClick={e => e.stopPropagation()}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setPaymentToggleState(null)}
           >
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary text-xl">payments</span>
+            <div
+              className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 space-y-5 animate-scaleIn"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary text-xl">payments</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-on-surface">Add Payment Installment</h3>
+                  <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                    Unit <span className="font-bold text-primary">{paymentToggleState.tenementNumber}</span> ·{' '}
+                    <span className="font-bold text-on-surface">{paymentToggleState.month} {paymentToggleState.year}</span>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-on-surface">Confirm Payment Receipt</h3>
-                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                  Mark <span className="font-bold text-on-surface">₹{DUES_AMOUNT.toLocaleString('en-IN')}</span> for{' '}
-                  <span className="font-bold text-on-surface">{paymentToggleState.month} {CURRENT_YEAR}</span> — Unit{' '}
-                  <span className="font-bold text-primary">{paymentToggleState.tenementNumber}</span> as received.
-                </p>
+
+              {/* Progress bar */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-on-surface-variant">Amount required</span>
+                  <span className="text-on-surface">₹{maintenanceAmount.toLocaleString('en-IN')}</span>
+                </div>
+                {existingInstallments.length > 0 && (
+                  <>
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-on-surface-variant">Already paid ({existingInstallments.length} installment{existingInstallments.length !== 1 ? 's' : ''})</span>
+                      <span className="text-emerald-600">₹{(paymentToggleState.amountPaid || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-on-surface-variant">Remaining balance</span>
+                      <span className="text-error">₹{remaining.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, ((paymentToggleState.amountPaid || 0) / maintenanceAmount) * 100)}%` }}
+                      />
+                    </div>
+                    {/* Installment history */}
+                    <div className="space-y-1 pt-1 border-t border-slate-200 mt-1">
+                      <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Previous installments</p>
+                      {existingInstallments.map((inst, i) => (
+                        <div key={i} className="flex justify-between text-[11px]">
+                          <span className="text-on-surface-variant">{inst.date} · {inst.method}</span>
+                          <span className="font-bold text-emerald-700">+₹{inst.amount.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Select payment mode</p>
-              <div className="grid grid-cols-3 gap-2">
-                {['Cheque', 'Cash', 'Bank Transfer'].map(method => (
-                  <button
-                    key={method}
-                    onClick={() => confirmPaymentToggle(method)}
-                    className="py-3 border border-slate-200 bg-slate-50 hover:bg-primary hover:text-white hover:border-primary text-[11px] font-bold text-on-surface rounded-xl transition-all active-scale"
-                  >
-                    {method}
-                  </button>
-                ))}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                    Installment Amount (₹) <span className="text-slate-400 normal-case font-normal">— remaining: ₹{remaining.toLocaleString('en-IN')}</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+                    min="1"
+                    max={remaining}
+                    placeholder={`Max ₹${remaining}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Reference / Cheque No.</label>
+                  <input
+                    type="text"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex justify-end">
-              <button onClick={() => setPaymentToggleState(null)} className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-all active-scale">
-                Cancel
-              </button>
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Select payment mode</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Cheque', 'Cash', 'Bank Transfer'].map(method => (
+                    <button
+                      key={method}
+                      onClick={() => confirmPaymentToggle(method)}
+                      disabled={!paymentAmount || Number(paymentAmount) <= 0}
+                      className="py-3 border border-slate-200 bg-slate-50 hover:bg-primary hover:text-white hover:border-primary text-[11px] font-bold text-on-surface rounded-xl transition-all active-scale disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={() => setPaymentToggleState(null)} className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-all active-scale">
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── View Notice Modal ── */}
       {selectedNotice && (
@@ -621,7 +795,6 @@ export default function AdminDashboard({ currentTab }) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[10px] text-on-surface-variant font-bold">{selectedNotice.date}</span>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${severityStyle(selectedNotice.severity).badge}`}>{selectedNotice.severity}</span>
                 </div>
                 <h2 className="font-headline-md text-on-surface font-extrabold pr-4">{selectedNotice.title}</h2>
               </div>
@@ -673,24 +846,11 @@ export default function AdminDashboard({ currentTab }) {
                   className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Notice Details</label>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Notice Details</label>
                 <textarea rows={4} placeholder="Write the full announcement…" value={noticeContent} onChange={(e) => setNoticeContent(e.target.value)}
                   className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all resize-none" />
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Severity Level</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['info', 'warning', 'critical'].map((sev) => {
-                    const style = severityStyle(sev);
-                    return (
-                      <button key={sev} type="button" onClick={() => setNoticeSeverity(sev)}
-                        className={`py-2 text-[11px] font-bold rounded-lg border transition-all active-scale capitalize ${noticeSeverity === sev ? `${style.badge} ring-1 ring-offset-1` : 'border-slate-200 bg-slate-50 text-on-surface-variant hover:bg-slate-100'}`}>
-                        {sev}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 mt-2">
                 <button type="button" onClick={() => setIsPublishNoticeOpen(false)} className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-all active-scale">
                   Cancel

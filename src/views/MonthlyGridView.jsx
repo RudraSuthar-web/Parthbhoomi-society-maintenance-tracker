@@ -6,15 +6,25 @@ import {
 } from '../utils/dateUtils';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-const STATUS = { PAID: 'Paid', UNPAID: 'Unpaid', UNBILLED: 'Unbilled' };
+const STATUS = { PAID: 'Paid', UNPAID: 'Unpaid', UNBILLED: 'Unbilled', PARTIAL: 'Partial' };
 
 function CellContent({ due }) {
   if (due.status === STATUS.PAID) {
     return (
       <>
-        <span className="material-symbols-outlined text-emerald-600/40 text-[18px] leading-none">verified</span>
-        <span className="text-[9px] font-bold text-emerald-700 leading-tight">
-          ₹{due.amount.toLocaleString('en-IN')}
+        <span className="material-symbols-outlined text-emerald-600/20 text-[18px] leading-none">verified</span>
+        <span className="text-[10px] font-bold text-emerald-700 leading-tight">
+          ₹{(due.amountPaid || due.amount || 0).toLocaleString('en-IN')}
+        </span>
+      </>
+    );
+  }
+  if (due.status === STATUS.PARTIAL) {
+    return (
+      <>
+        <span className="material-symbols-outlined text-amber-500 text-[18px] leading-none">pending</span>
+        <span className="text-[10px] font-bold text-amber-700 leading-tight">
+          ₹{(due.amountPaid || 0).toLocaleString('en-IN')}
         </span>
       </>
     );
@@ -23,8 +33,8 @@ function CellContent({ due }) {
     return (
       <>
         <span className="material-symbols-outlined text-error text-[18px] leading-none">cancel</span>
-        <span className="text-[9px] font-bold text-error leading-tight">
-          ₹{due.amount.toLocaleString('en-IN')}
+        <span className="text-[10px] font-bold text-error leading-tight">
+          ₹{(due.amount || 0).toLocaleString('en-IN')}
         </span>
       </>
     );
@@ -32,16 +42,16 @@ function CellContent({ due }) {
   return <span className="text-[13px] font-semibold text-slate-300 select-none">—</span>;
 }
 
-function MonthHeaderCell({ month, monthIdx, totalTenements }) {
-  const paid = totalTenements[monthIdx]?.paid ?? 0;
-  const rate = totalTenements.length === 0 || !totalTenements[monthIdx] ? 0
-    : paid / (totalTenements[monthIdx].total || 1);
-    const isCurrentMonth = ALL_MONTHS[monthIdx] === CURRENT_MONTH;
+function MonthHeaderCell({ month, monthIdx, monthStats, selectedYear }) {
+  const stats = monthStats[monthIdx];
+  const paid = stats?.paid ?? 0;
+  const rate = !stats || stats.total === 0 ? 0 : paid / stats.total;
+  // Only highlight as "current" when actually viewing the real current year
+  const isCurrentMonth = ALL_MONTHS[monthIdx] === CURRENT_MONTH && selectedYear === CURRENT_YEAR;
 
   const rateColor =
-    rate > 0    ? isCurrentMonth ? 'text-blue-700' : 'text-slate-700'
-    :                'text-slate-400';
-
+    rate > 0 ? isCurrentMonth ? 'text-blue-700' : 'text-slate-700'
+    : 'text-slate-400';
 
   return (
     <th
@@ -53,18 +63,36 @@ function MonthHeaderCell({ month, monthIdx, totalTenements }) {
         {isCurrentMonth && (
           <span className="text-[8px] font-bold text-primary uppercase tracking-wide leading-none">Current</span>
         )}
-        <span className={`font-bold text-[11px] uppercase tracking-wide ${rateColor}`}>
-          {MONTHS_SHORT[monthIdx]}
-        </span>
-        
+        {isCurrentMonth ? (
+          <span className={`font-bold text-[15px] uppercase tracking-wide ${rateColor}`}>{MONTHS_SHORT[monthIdx]}</span>
+        ) : (
+          <span className={`font-bold text-[11px] uppercase tracking-wide ${rateColor}`}>
+            {MONTHS_SHORT[monthIdx]}
+          </span>
+        )}
       </div>
     </th>
   );
 }
 
-// ─── Payment Method Modal ──────────────────────────────────────────────────
-function PaymentModal({ state, onConfirm, onCancel }) {
+// ─── Installment Payment Modal ───────────────────────────────────────────────
+function PaymentModal({ state, maintenanceAmount, onConfirm, onCancel }) {
+  const [amount, setAmount] = useState('');
+  const [reference, setReference] = useState('');
+
+  React.useEffect(() => {
+    if (state) {
+      const remaining = maintenanceAmount - (state.amountPaid || 0);
+      setAmount(String(remaining > 0 ? remaining : maintenanceAmount));
+      setReference('');
+    }
+  }, [state, maintenanceAmount]);
+
   if (!state) return null;
+
+  const existing = state.currentInstallments || [];
+  const remaining = maintenanceAmount - (state.amountPaid || 0);
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -79,12 +107,73 @@ function PaymentModal({ state, onConfirm, onCancel }) {
             <span className="material-symbols-outlined text-primary text-xl">payments</span>
           </div>
           <div>
-            <h3 className="font-bold text-sm text-on-surface">Confirm Payment Receipt</h3>
+            <h3 className="font-bold text-sm text-on-surface">Add Payment Installment</h3>
             <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-              Mark <span className="font-bold text-on-surface">₹{DUES_AMOUNT.toLocaleString('en-IN')}</span> as received
-              for <span className="font-bold text-on-surface">{state.month} {CURRENT_YEAR}</span> from{' '}
-              <span className="font-bold text-primary">Unit {state.tenementNumber}</span>.
+              Unit <span className="font-bold text-primary">{state.tenementNumber}</span> ·{' '}
+              <span className="font-bold text-on-surface">{state.month} {state.year}</span>
             </p>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+          <div className="flex justify-between text-xs font-bold">
+            <span className="text-on-surface-variant">Required</span>
+            <span className="text-on-surface">₹{maintenanceAmount.toLocaleString('en-IN')}</span>
+          </div>
+          {existing.length > 0 && (
+            <>
+              <div className="flex justify-between text-xs font-bold">
+                <span className="text-on-surface-variant">Paid so far</span>
+                <span className="text-emerald-600">₹{(state.amountPaid || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold">
+                <span className="text-on-surface-variant">Remaining</span>
+                <span className="text-error">₹{remaining.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, ((state.amountPaid || 0) / maintenanceAmount) * 100)}%` }}
+                />
+              </div>
+              <div className="space-y-1 pt-1 border-t border-slate-200">
+                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Previous installments</p>
+                {existing.map((inst, i) => (
+                  <div key={i} className="flex justify-between text-[11px]">
+                    <span className="text-on-surface-variant">{inst.date} · {inst.method}</span>
+                    <span className="font-bold text-emerald-700">+₹{inst.amount.toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              Installment Amount (₹) <span className="text-slate-400 normal-case font-normal">— remaining: ₹{remaining.toLocaleString('en-IN')}</span>
+            </label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+              min="1"
+              max={remaining}
+              placeholder={`Max ₹${remaining}`}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Reference / Cheque No.</label>
+            <input
+              type="text"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="Optional"
+              className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+            />
           </div>
         </div>
 
@@ -94,8 +183,9 @@ function PaymentModal({ state, onConfirm, onCancel }) {
             {['Cheque', 'Cash', 'Bank Transfer'].map((method) => (
               <button
                 key={method}
-                onClick={() => onConfirm(method)}
-                className="py-3 border border-slate-200 bg-slate-50 hover:bg-primary hover:text-white hover:border-primary text-[11px] font-bold text-on-surface rounded-lg transition-all duration-150 active-scale focus:outline-none focus:ring-2 focus:ring-primary"
+                onClick={() => onConfirm(method, Number(amount), reference)}
+                disabled={!amount || Number(amount) <= 0}
+                className="py-3 border border-slate-200 bg-slate-50 hover:bg-primary hover:text-white hover:border-primary text-[11px] font-bold text-on-surface rounded-lg transition-all duration-150 active-scale focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {method}
               </button>
@@ -135,9 +225,9 @@ function RevertConfirmModal({ state, onConfirm, onCancel }) {
           <div>
             <h3 className="font-bold text-sm text-on-surface">Revert Payment?</h3>
             <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-              This will mark <span className="font-bold text-on-surface">{state.month} {CURRENT_YEAR}</span> for{' '}
+              This will mark <span className="font-bold text-on-surface">{state.month} {state.year}</span> for{' '}
               <span className="font-bold text-primary">Unit {state.tenementNumber}</span> back to{' '}
-              <span className="font-bold text-error">Unpaid</span>. This action can be undone.
+              <span className="font-bold text-error">Unpaid</span>. 
             </p>
           </div>
         </div>
@@ -162,12 +252,12 @@ function RevertConfirmModal({ state, onConfirm, onCancel }) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function MonthlyGridView() {
-  const { tenements, togglePaymentStatus } = useContext(AppContext);
+  const { tenements, addInstallment, revertPayment, selectedYear, maintenanceAmount } = useContext(AppContext);
 
-  const [paymentModal, setPaymentModal] = useState(null);   // { tenementNumber, month }
-  const [revertModal, setRevertModal]   = useState(null);   // { tenementNumber, month }
-  const [tooltip, setTooltip]           = useState(null);   // { text, cellEl }
-  const [sortBy, setSortBy]             = useState('unit'); // 'unit' | 'name' | 'paid' | 'unpaid'
+  const [paymentModal, setPaymentModal] = useState(null);
+  const [revertModal, setRevertModal]   = useState(null);
+  const [tooltip, setTooltip]           = useState(null);
+  const [sortBy, setSortBy]             = useState('unit');
   const [search, setSearch]             = useState('');
 
   // ── Filter + Sort ────────────────────────────────────────────────────────
@@ -180,62 +270,103 @@ export default function MonthlyGridView() {
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === 'unit')   return parseInt(a.tenementNumber) - parseInt(b.tenementNumber);
     if (sortBy === 'name')   return a.ownerName.localeCompare(b.ownerName);
-    if (sortBy === 'paid')   return b.dues.filter(d => d.status === STATUS.PAID).length - a.dues.filter(d => d.status === STATUS.PAID).length;
+    // Sort by paid count for the SELECTED year only
+    if (sortBy === 'paid')   return (
+      b.dues.filter(d => d.status === STATUS.PAID && d.year === selectedYear).length -
+      a.dues.filter(d => d.status === STATUS.PAID && d.year === selectedYear).length
+    );
     if (sortBy === 'unpaid') {
-      const aUnpaid = a.dues.filter(d => d.status === STATUS.UNPAID).length;
-      const bUnpaid = b.dues.filter(d => d.status === STATUS.UNPAID).length;
+      const aUnpaid = a.dues.filter(d => (d.status === STATUS.UNPAID || d.status === STATUS.PARTIAL) && d.year === selectedYear).length;
+      const bUnpaid = b.dues.filter(d => (d.status === STATUS.UNPAID || d.status === STATUS.PARTIAL) && d.year === selectedYear).length;
       return bUnpaid - aUnpaid;
     }
     return 0;
   });
 
-  // ── Per-month aggregates ─────────────────────────────────────────────────
+  // ── Per-month aggregates (scoped to selectedYear) ────────────────────────
   const monthStats = ALL_MONTHS.map((month) => ({
     month,
-    paid:     tenements.filter(t => t.dues.find(d => d.month === month)?.status === STATUS.PAID).length,
-    unpaid:   tenements.filter(t => t.dues.find(d => d.month === month)?.status === STATUS.UNPAID).length,
+    paid:     tenements.filter(t => t.dues.find(d => d.month === month && d.year === selectedYear)?.status === STATUS.PAID).length,
+    partial:  tenements.filter(t => t.dues.find(d => d.month === month && d.year === selectedYear)?.status === STATUS.PARTIAL).length,
+    unpaid:   tenements.filter(t => t.dues.find(d => d.month === month && d.year === selectedYear)?.status === STATUS.UNPAID).length,
     total:    tenements.length,
-    collected: tenements.filter(t => t.dues.find(d => d.month === month)?.status === STATUS.PAID).length * DUES_AMOUNT,
+    collected: tenements.reduce((acc, t) => {
+      const due = t.dues.find(d => d.month === month && d.year === selectedYear);
+      if (!due) return acc;
+      if (due.status === STATUS.PAID) return acc + (due.amountPaid || due.amount || maintenanceAmount);
+      if (due.status === STATUS.PARTIAL) return acc + (due.amountPaid || 0);
+      return acc;
+    }, 0),
   }));
 
   const grandCollected  = monthStats.reduce((s, m) => s + m.collected, 0);
   const grandPaidSlots  = monthStats.reduce((s, m) => s + m.paid, 0);
-  const grandPendingAmt = monthStats.reduce((s, m) => s + m.unpaid * DUES_AMOUNT, 0);
-  const overallRate     = tenements.length * 12 > 0
+  const grandPendingAmt = tenements.reduce((acc, t) =>
+    acc + t.dues.reduce((tAcc, d) => {
+      if (d.year !== selectedYear) return tAcc;
+      if (d.status === STATUS.UNPAID) return tAcc + maintenanceAmount;
+      if (d.status === STATUS.PARTIAL) return tAcc + (maintenanceAmount - (d.amountPaid || 0));
+      return tAcc;
+    }, 0), 0);
+  const overallRate = tenements.length * 12 > 0
     ? ((grandPaidSlots / (tenements.length * 12)) * 100).toFixed(1)
     : '0.0';
 
   // ── Cell interaction ─────────────────────────────────────────────────────
-  const handleCellClick = useCallback((tenementNumber, month, status) => {
+  const handleCellClick = useCallback((tenementNumber, month, status, due) => {
     if (status === STATUS.UNBILLED) return;
-    if (status === STATUS.PAID) {
-      setRevertModal({ tenementNumber, month });
+    if (status === STATUS.PAID || status === STATUS.PARTIAL) {
+      setRevertModal({ tenementNumber, month, year: selectedYear });
     } else {
-      setPaymentModal({ tenementNumber, month });
+      // Unpaid → open payment modal with installment info
+      const currentInstallments = due?.installments || [];
+      const amountPaid = due?.amountPaid || 0;
+      setPaymentModal({ tenementNumber, month, year: selectedYear, currentInstallments, amountPaid });
     }
-  }, []);
+  }, [selectedYear]);
 
-  const confirmPayment = (method) => {
+  const confirmPayment = (method, amount, reference) => {
     if (paymentModal) {
-      togglePaymentStatus(paymentModal.tenementNumber, paymentModal.month, method);
+      const today = new Date();
+      const randomRef = 'TXN' + Math.floor(10000 + Math.random() * 90000);
+      addInstallment(
+        paymentModal.tenementNumber,
+        paymentModal.month,
+        {
+          amount,
+          date: today.toISOString().split('T')[0],
+          reference: reference || randomRef,
+          method,
+        },
+        paymentModal.year
+      );
       setPaymentModal(null);
     }
   };
 
   const confirmRevert = () => {
     if (revertModal) {
-      togglePaymentStatus(revertModal.tenementNumber, revertModal.month);
+      revertPayment(revertModal.tenementNumber, revertModal.month, revertModal.year);
       setRevertModal(null);
     }
   };
 
   const handleCellMouseEnter = useCallback((e, due) => {
-    if (due.status !== STATUS.PAID) return;
-    setTooltip({
-      text: `Cleared: ${formatDate(due.dateCleared)}\nRef: ${due.reference}\nMode: ${due.method}`,
-      rect: e.currentTarget.getBoundingClientRect(),
-    });
-  }, []);
+    if (due.status !== STATUS.PAID && due.status !== STATUS.PARTIAL) return;
+    const installments = due.installments || [];
+    if (due.status === STATUS.PARTIAL && installments.length > 0) {
+      const lines = installments.map(i => `₹${i.amount} · ${i.method} · ${i.date}`).join('\n');
+      setTooltip({
+        text: `Partial (₹${due.amountPaid}/${maintenanceAmount})\n${lines}`,
+        rect: e.currentTarget.getBoundingClientRect(),
+      });
+    } else if (due.status === STATUS.PAID) {
+      const text = due.method === 'Cash'
+        ? `Cleared: ${formatDate(due.dateCleared)}\nMode: ${due.method}`
+        : `Cleared: ${formatDate(due.dateCleared)}\nRef: ${due.reference}\nMode: ${due.method}`;
+      setTooltip({ text, rect: e.currentTarget.getBoundingClientRect() });
+    }
+  }, [maintenanceAmount]);
 
   const handleCellMouseLeave = useCallback(() => setTooltip(null), []);
 
@@ -252,7 +383,7 @@ export default function MonthlyGridView() {
 
   return (
     <>
-      {/* Force Landscape Print Orientation for the Ledger */}
+      {/* Force Landscape Print Orientation */}
       <style>{`
         @media print {
           @page { size: A4 landscape !important; margin: 10mm; }
@@ -270,10 +401,10 @@ export default function MonthlyGridView() {
               </span>
             </div>
             <h2 className="font-display-lg text-on-surface">
-              Payment Matrix <span className="text-primary">{CURRENT_YEAR}</span>
+              Payment Matrix <span className="text-primary">{selectedYear}</span>
             </h2>
             <p className="text-xs text-on-surface-variant mt-1">
-              Annual maintenance status for all {tenements.length} tenements · FY {CURRENT_YEAR}
+              Annual maintenance status for all {tenements.length} tenements · FY {selectedYear}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -292,9 +423,9 @@ export default function MonthlyGridView() {
       <div className="grid grid-cols-2 xl:grid-cols-4 print:grid-cols-4 gap-3 sm:gap-4 print:mb-6">
         {[
           {
-            label: 'YTD Collected',
+            label: `YTD Collected (${selectedYear})`,
             value: `₹${(grandCollected / 1000).toFixed(1)}k`,
-            sub: `${grandPaidSlots} payments received`,
+            sub: `${grandPaidSlots} fully paid slots`,
             icon: 'payments',
             iconBg: 'bg-emerald-50',
             iconColor: 'text-emerald-600',
@@ -303,7 +434,7 @@ export default function MonthlyGridView() {
           {
             label: 'Outstanding Amount',
             value: `₹${(grandPendingAmt / 1000).toFixed(1)}k`,
-            sub: `${monthStats.reduce((s,m)=>s+m.unpaid,0)} unpaid slots`,
+            sub: `${monthStats.reduce((s, m) => s + m.unpaid + m.partial, 0)} unpaid/partial slots`,
             icon: 'hourglass_empty',
             iconBg: 'bg-red-50',
             iconColor: 'text-error',
@@ -312,7 +443,7 @@ export default function MonthlyGridView() {
           {
             label: 'Collection Rate',
             value: `${overallRate}%`,
-            sub: `${grandPaidSlots} of ${tenements.length * 12} slots`,
+            sub: `${grandPaidSlots} of ${tenements.length * 12} slots paid`,
             icon: 'trending_up',
             iconBg: 'bg-blue-50',
             iconColor: 'text-primary',
@@ -321,7 +452,7 @@ export default function MonthlyGridView() {
           {
             label: 'Total Tenements',
             value: tenements.length,
-            sub: `${CURRENT_MONTH} ${CURRENT_YEAR} active`,
+            sub: `Maintenance: ₹${maintenanceAmount.toLocaleString('en-IN')}/mo`,
             icon: 'home_work',
             iconBg: 'bg-slate-50',
             iconColor: 'text-slate-600',
@@ -341,7 +472,7 @@ export default function MonthlyGridView() {
         ))}
       </div>
 
-      {/* ── Toolbar (Search + Sort + Legend) ─────────────────────────────── */}
+      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-soft px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 print:hidden">
         {/* Search */}
         <div className="relative flex-1 max-w-xs">
@@ -377,7 +508,6 @@ export default function MonthlyGridView() {
             <option value="unpaid">Most Overdue</option>
           </select>
           <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
-         
         </div>
 
         {/* Spacer */}
@@ -388,6 +518,10 @@ export default function MonthlyGridView() {
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-3.5 rounded bg-emerald-100 border border-emerald-300 flex-shrink-0" />
             <span className="font-semibold text-on-surface-variant">Paid</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-300 flex-shrink-0" />
+            <span className="font-semibold text-on-surface-variant">Partial</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-3.5 rounded bg-red-100 border border-red-300 flex-shrink-0" />
@@ -414,7 +548,7 @@ export default function MonthlyGridView() {
           {/* Print Header */}
           <div className="hidden print:block text-center mb-6 pb-4 border-b-2 border-black">
             <h1 className="text-2xl font-extrabold text-black">Parthbhoomi CHS</h1>
-            <p className="text-sm font-bold text-slate-700 mt-1">Society Maintenance Ledger · FY {CURRENT_YEAR}</p>
+            <p className="text-sm font-bold text-slate-700 mt-1">Society Maintenance Ledger · FY {selectedYear}</p>
           </div>
 
           <div className="overflow-x-auto thin-scrollbar print:overflow-visible">
@@ -436,7 +570,8 @@ export default function MonthlyGridView() {
                       key={month}
                       month={month}
                       monthIdx={idx}
-                      totalTenements={monthStats}
+                      monthStats={monthStats}
+                      selectedYear={selectedYear}
                     />
                   ))}
 
@@ -444,17 +579,17 @@ export default function MonthlyGridView() {
                     className="hidden sm:table-cell print:table-cell sticky right-0 z-20 print:static print:z-auto bg-slate-50 print:bg-slate-100 border-b border-l border-slate-200 px-3 py-3 text-center"
                     style={{ minWidth: '80px' }}
                   >
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD</span>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD {selectedYear}</span>
                   </th>
                 </tr>
-
-                  
               </thead>
 
               <tbody>
                 {sorted.map((tenement, rowIdx) => {
-                  const paidCount = tenement.dues.filter((d) => d.status === STATUS.PAID).length;
-                  const unpaidCount = tenement.dues.filter((d) => d.status === STATUS.UNPAID).length;
+                  // YTD counts scoped to selectedYear only
+                  const paidCount   = tenement.dues.filter((d) => d.status === STATUS.PAID && d.year === selectedYear).length;
+                  const partialCount = tenement.dues.filter((d) => d.status === STATUS.PARTIAL && d.year === selectedYear).length;
+                  const unpaidCount = tenement.dues.filter((d) => d.status === STATUS.UNPAID && d.year === selectedYear).length;
                   const isEven = rowIdx % 2 === 0;
 
                   return (
@@ -464,20 +599,18 @@ export default function MonthlyGridView() {
                     >
                       {/* Identity cell */}
                       <td
-                        className={`sticky left-0 z-10 print:static print:z-auto border-b border-r border-slate-100 px-2 sm:px-3 py-2 transition-colors duration-100 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none print:max-w-none print:w-auto print:whitespace-nowrap ${isEven ? 'bg-white group-hover:bg-blue-50/40' : 'bg-slate-50/40 group-hover:bg-blue-50/40'}`}
+                        className={`sticky left-0 z-10 print:static print:z-auto border-b border-r border-slate-100 px-2 sm:px-3 py-3 transition-colors duration-100 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none print:max-w-none print:w-auto print:whitespace-nowrap ${isEven ? 'bg-white group-hover:bg-blue-50/40' : 'bg-slate-50/40 group-hover:bg-blue-50/40'}`}
                       >
                         <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-hidden print:overflow-visible">
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/50 text-white flex items-center justify-center font-bold text-[9px] sm:text-xs flex-shrink-0 shadow-sm print:shadow-none">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full text-black flex items-center justify-center font-bold text-[9px] sm:text-xs flex-shrink-0 shadow-md print:shadow-none">
                             {tenement.tenementNumber}
                           </div>
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex justify-between items-center gap-1 sm:gap-1 overflow-hidden print:overflow-visible">
                             <p className="font-bold text-on-surface text-[10px] sm:text-xs truncate max-w-[40px] sm:max-w-[120px] print:whitespace-nowrap print:max-w-none print:overflow-visible">
                               {tenement.ownerName.split(' ')[0]}
                             </p>
-                            {unpaidCount > 0 && (
-                              <p className="text-[9px] font-bold text-error leading-tight hidden sm:block">
-                                {unpaidCount} month{unpaidCount > 1 ? 's' : ''} overdue
-                              </p>
+                            {(unpaidCount > 0 || partialCount > 0) && (
+                              <span className="text-[12px] font-bold text-error leading-tight hidden sm:block">({unpaidCount + partialCount})</span>
                             )}
                           </div>
                         </div>
@@ -485,7 +618,7 @@ export default function MonthlyGridView() {
 
                       {/* Month cells */}
                       {ALL_MONTHS.map((month) => {
-                        const due = tenement.dues.find((d) => d.month === month);
+                        const due = tenement.dues.find((d) => d.month === month && d.year === selectedYear);
                         if (!due) {
                           return (
                             <td key={month} className="border-b border-r border-slate-100 px-1 py-1" />
@@ -493,23 +626,24 @@ export default function MonthlyGridView() {
                         }
 
                         const isPaid     = due.status === STATUS.PAID;
+                        const isPartial  = due.status === STATUS.PARTIAL;
                         const isUnpaid   = due.status === STATUS.UNPAID;
                         const isUnbilled = due.status === STATUS.UNBILLED;
-                        const isCurrent  = month === CURRENT_MONTH;
+                        // Only highlight as current when viewing the real current year
+                        const isCurrent  = month === CURRENT_MONTH && selectedYear === CURRENT_YEAR;
 
                         const cellClasses = [
                           'border-b border-r px-0.5 py-1 transition-colors duration-100',
                           isCurrent ? 'bg-blue-50/30' : '',
-                          isPaid    ? 'border-emerald-100' : isUnpaid ? 'border-red-100' : 'border-slate-100',
+                          isPaid    ? 'border-emerald-100 bg-emerald-20 hover:bg-emerald-100 cursor-pointer'
+                          : isPartial ? 'border-amber-100 bg-amber-50 hover:bg-amber-100 cursor-pointer'
+                          : isUnpaid  ? 'border-red-100 bg-red-50 hover:bg-red-100 cursor-pointer'
+                          : 'border-slate-100',
                         ].join(' ');
 
                         const innerClasses = [
-                          'flex flex-col items-center justify-center gap-0.5 rounded mx-0.5 py-1',
+                          'flex flex-col items-center justify-center gap-0.5 rounded mx-0.5 ',
                           'min-h-[36px] transition-all duration-100',
-                          isPaid    ? 'bg-emerald-50 hover:bg-emerald-100 cursor-pointer' : '',
-                          isUnpaid  ? 'bg-red-50 hover:bg-red-100 cursor-pointer' : '',
-                          isUnbilled ? 'bg-slate-50 cursor-not-allowed' : '',
-                          !isUnbilled ? 'active:scale-95' : '',
                         ].join(' ');
 
                         return (
@@ -517,10 +651,10 @@ export default function MonthlyGridView() {
                             <div
                               role={!isUnbilled ? 'button' : undefined}
                               tabIndex={!isUnbilled ? 0 : undefined}
-                              aria-label={`${month} ${CURRENT_YEAR}: ${due.status} — Unit ${tenement.tenementNumber}`}
+                              aria-label={`${month} ${selectedYear}: ${due.status} — Unit ${tenement.tenementNumber}`}
                               className={innerClasses}
-                              onClick={() => handleCellClick(tenement.tenementNumber, month, due.status)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleCellClick(tenement.tenementNumber, month, due.status)}
+                              onClick={() => handleCellClick(tenement.tenementNumber, month, due.status, due)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleCellClick(tenement.tenementNumber, month, due.status, due)}
                               onMouseEnter={(e) => handleCellMouseEnter(e, due)}
                               onMouseLeave={handleCellMouseLeave}
                             >
@@ -530,7 +664,7 @@ export default function MonthlyGridView() {
                         );
                       })}
 
-                      {/* YTD column */}
+                      {/* YTD column — counts only selectedYear */}
                       <td
                         className={`hidden sm:table-cell print:table-cell sticky right-0 z-10 print:static print:z-auto border-b border-l border-slate-100 px-2 py-2 text-center transition-colors duration-100 ${isEven ? 'bg-white group-hover:bg-blue-50/40' : 'bg-slate-50/40 group-hover:bg-blue-50/40'}`}
                       >
@@ -543,6 +677,9 @@ export default function MonthlyGridView() {
                           }`}>
                             {paidCount}/12
                           </span>
+                          {partialCount > 0 && (
+                            <span className="text-[9px] font-bold text-amber-600">{partialCount} partial</span>
+                          )}
                           <div className="w-9 h-1 bg-slate-200 rounded-full overflow-hidden print:hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-700 ${
@@ -574,16 +711,17 @@ export default function MonthlyGridView() {
                       key={stats.month}
                       className="border-t border-slate-700 px-1 py-3 text-center"
                     >
-                    {stats.collected.toLocaleString('en-IN') != '0' && (
+                    {stats.collected > 0 && (
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className="font-extrabold text-[13px] text-emerald-400">
+                        <span className="font-extrabold text-[13px] text-white">
                           ₹{stats.collected.toLocaleString('en-IN')}
                         </span>
-                      </div> ) }
+                      </div>
+                    )}
                     </td>
                   ))}
                   <td className="hidden sm:table-cell print:table-cell sticky right-0 z-20 print:static print:z-auto bg-slate-800 print:bg-slate-200 border-t border-l border-slate-700 print:border-slate-300 px-3 py-3 text-center">
-                    <span className="font-extrabold text-sm text-emerald-400 print:text-emerald-700">
+                    <span className="font-extrabold text-sm text-blue-400 print:text-emerald-700">
                       ₹{grandCollected.toLocaleString('en-IN')}
                     </span>
                   </td>
@@ -597,7 +735,7 @@ export default function MonthlyGridView() {
       {/* ── Tooltip ──────────────────────────────────────────────────────── */}
       {tooltip && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed z-[200] pointer-events-none px-3 py-2 bg-slate-900 text-white text-[10px] font-semibold rounded-lg shadow-2xl whitespace-pre-line border border-slate-700 animate-fadeIn"
+          className="fixed z-[200] pointer-events-none px-3 py-2 bg-slate-900 text-white text-[15px] font-semibold rounded-lg shadow-2xl whitespace-pre-line border border-slate-700 animate-fadeIn"
           style={{
             top: tooltip.rect.bottom + 8,
             left: tooltip.rect.left + tooltip.rect.width / 2,
@@ -612,6 +750,7 @@ export default function MonthlyGridView() {
       {/* ── Modals ───────────────────────────────────────────────────────── */}
       <PaymentModal
         state={paymentModal}
+        maintenanceAmount={maintenanceAmount}
         onConfirm={confirmPayment}
         onCancel={() => setPaymentModal(null)}
       />
