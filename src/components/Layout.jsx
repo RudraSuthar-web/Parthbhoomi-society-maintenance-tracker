@@ -21,11 +21,13 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
         { id: 'tenements',     name: 'All Tenements',      icon: 'domain' },
         { id: 'monthly-grid',  name: 'Monthly Grid',       icon: 'grid_view' },
         { id: 'notices',       name: 'Notice Broadcaster', icon: 'campaign' },
+        { id: 'expenses',      name: 'Expense Tracker',    icon: 'account_balance_wallet' },
       ]
     : [
         { id: 'dashboard', name: 'My Dashboard',      icon: 'home' },
         { id: 'ledger',    name: 'Transaction Ledger', icon: 'receipt_long' },
         { id: 'notices',   name: 'Society Bulletin',   icon: 'campaign' },
+        { id: 'expenses',  name: 'Society Expenses',   icon: 'account_balance_wallet' },
         { id: 'profile',   name: 'My Profile',         icon: 'person' },
       ];
 

@@ -1,13 +1,14 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import ReceiptModal from '../components/ReceiptModal';
+import DrivePreviewModal from '../components/DrivePreviewModal';
 import { DUES_AMOUNT, formatDate } from '../utils/dateUtils';
 
 export default function ResidentDashboard({ currentTab }) {
   const {
     user, tenements, notices, updateProfile,
     selectedYear, selectedMonth,
-    maintenanceAmount,
+    maintenanceAmount, expenses,
   } = useContext(AppContext);
 
   const tenementData = tenements.find(t => t.tenementNumber === user?.username);
@@ -15,6 +16,10 @@ export default function ResidentDashboard({ currentTab }) {
   const [expandedIdx, setExpandedIdx]     = useState(null);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  // Drive Bill Preview State
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
 
   const [profileName, setProfileName]       = useState('');
   const [profileContact, setProfileContact] = useState('');
@@ -608,17 +613,129 @@ export default function ResidentDashboard({ currentTab }) {
     </div>
   );
 
+  const renderExpensesView = () => {
+    const periodExpenses = expenses.filter(e => e.date.startsWith(selectedYear.toString()));
+    const totalSpent = periodExpenses.reduce((s, e) => s + e.amount, 0);
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft">
+          <h2 className="font-display-lg text-on-surface font-extrabold">Society Expenses Tracker</h2>
+          <p className="text-xs text-on-surface-variant font-medium mt-0.5">Overview of expenditures for {selectedYear}</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Expenditures ({selectedYear})</span>
+              <span className="material-symbols-outlined text-primary bg-surface-container p-2 rounded-full">account_balance_wallet</span>
+            </div>
+            <div>
+              <h3 className="text-3xl font-extrabold text-[#191b23]">₹{totalSpent.toLocaleString('en-IN')}</h3>
+              <p className="text-xs text-on-surface-variant font-semibold mt-1">
+                Spent across {periodExpenses.length} verified transactions
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Recent Expense</span>
+              <span className="material-symbols-outlined text-[#4CAF50] bg-success-container p-2 rounded-full">receipt</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-on-surface truncate">{periodExpenses[0]?.description || 'No expenses recorded'}</h3>
+              <p className="text-xs text-on-surface-variant font-semibold mt-1">
+                {periodExpenses[0] ? `₹${periodExpenses[0].amount.toLocaleString('en-IN')} on ${periodExpenses[0].date}` : ''}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Storage Sync</span>
+              <span className="material-symbols-outlined text-amber-500 bg-amber-50 p-2 rounded-full">add_to_drive</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-on-surface">Google Drive Archived</h3>
+              <p className="text-xs text-on-surface-variant font-semibold mt-1">
+                All bills are secure in Google Drive
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg border border-[#E2E8F0] shadow-soft space-y-4">
+          <h3 className="font-title-lg font-bold text-on-surface">Expense Log</h3>
+
+          {periodExpenses.length === 0 ? (
+            <p className="text-xs text-on-surface-variant text-center py-6">No expenses recorded for this period.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs font-semibold">
+                <thead>
+                  <tr className="border-b border-[#E2E8F0] text-on-surface-variant uppercase tracking-wider">
+                    <th className="pb-3 pr-2">Date</th>
+                    <th className="pb-3 pr-2">Category</th>
+                    <th className="pb-3 pr-2">Description</th>
+                    <th className="pb-3 pr-2 text-right">Amount</th>
+                    <th className="pb-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E2E8F0]">
+                  {periodExpenses.map((exp) => (
+                    <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3.5 pr-2 font-medium">{exp.date}</td>
+                      <td className="py-3.5 pr-2">
+                        <span className="bg-slate-100 text-on-surface px-2 py-0.5 rounded-full border border-slate-200 uppercase text-[9px] font-bold">
+                          {exp.category}
+                        </span>
+                      </td>
+                      <td className="py-3.5 pr-2 font-bold text-on-surface">{exp.description}</td>
+                      <td className="py-3.5 pr-2 text-right font-bold text-on-surface">₹{exp.amount.toLocaleString('en-IN')}</td>
+                      <td className="py-3.5 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedExpense(exp);
+                            setIsDriveOpen(true);
+                          }}
+                          className="px-3 py-1.5 border border-outline-variant bg-white hover:bg-surface-container-high rounded text-[10px] font-bold shadow-soft flex items-center justify-center space-x-1 mx-auto transition-all duration-200 active-scale"
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-amber-500 font-bold">
+                            add_to_drive
+                          </span>
+                          <span>View Bill</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {currentTab === 'dashboard' && renderDashboardView()}
       {currentTab === 'ledger'    && renderLedgerView()}
       {currentTab === 'notices'   && renderBulletinsView()}
+      {currentTab === 'expenses'  && renderExpensesView()}
       {currentTab === 'profile'   && renderProfileView()}
 
       <ReceiptModal
         isOpen={isReceiptOpen}
         onClose={() => setIsReceiptOpen(false)}
         receiptData={selectedReceipt}
+      />
+
+      <DrivePreviewModal
+        isOpen={isDriveOpen}
+        onClose={() => setIsDriveOpen(false)}
+        expense={selectedExpense}
       />
     </>
   );

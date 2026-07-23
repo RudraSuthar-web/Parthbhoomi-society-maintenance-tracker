@@ -26,8 +26,8 @@ function AppContent() {
 
   // Central navigation dispatcher to handle routing + subview tabs
   const handleNavigate = (viewName) => {
-    const adminTabs    = ['overview', 'tenements', 'notices', 'monthly-grid'];
-    const residentTabs = ['dashboard', 'ledger', 'notices', 'profile'];
+    const adminTabs    = ['overview', 'tenements', 'notices', 'monthly-grid', 'expenses'];
+    const residentTabs = ['dashboard', 'ledger', 'notices', 'profile', 'expenses'];
 
     if (adminTabs.includes(viewName)) {
       setCurrentTab(viewName);

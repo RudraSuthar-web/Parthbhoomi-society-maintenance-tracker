@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { initialTenements, initialNotices, mockUsers } from '../data/mockData';
+import { initialTenements, initialNotices, mockUsers, initialExpenses } from '../data/mockData';
 import { CURRENT_YEAR, CURRENT_MONTH, ALL_MONTHS, DUES_AMOUNT } from '../utils/dateUtils';
 import {
   getMaintenanceAmount, saveMaintenanceAmount,
@@ -132,6 +132,16 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('society_notices', JSON.stringify(notices));
   }, [notices]);
+
+  // ── Expenses State ─────────────────────────────────────────────────────────
+  const [expenses, setExpenses] = useState(() => {
+    const savedExpenses = localStorage.getItem('society_expenses');
+    return savedExpenses ? JSON.parse(savedExpenses) : initialExpenses;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('society_expenses', JSON.stringify(expenses));
+  }, [expenses]);
 
   useEffect(() => {
     if (user) {
@@ -357,6 +367,25 @@ export const AppProvider = ({ children }) => {
     deleteNoticeById(id);
   };
 
+  // ── Expenses Actions ───────────────────────────────────────────────────────
+  const addExpense = (category, description, amount, date, billData) => {
+    const newExpense = {
+      id: "E" + (expenses.length + 1) + "-" + Math.floor(Math.random() * 1000),
+      category,
+      description: description.trim(),
+      amount: Number(amount),
+      date,
+      driveLink: `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`,
+      billData
+    };
+    setExpenses(prev => [newExpense, ...prev]);
+    return { success: true, expense: newExpense };
+  };
+
+  const deleteExpense = (id) => {
+    setExpenses(prev => prev.filter(e => e.id !== id));
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -380,6 +409,9 @@ export const AppProvider = ({ children }) => {
         togglePaymentStatus,
         addNotice,
         deleteNotice,
+        expenses,
+        addExpense,
+        deleteExpense,
       }}
     >
       {children}

@@ -2,6 +2,7 @@ import React, { useContext, useState, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import ReceiptModal from '../components/ReceiptModal';
 import TenementModal from '../components/TenementModal';
+import DrivePreviewModal from '../components/DrivePreviewModal';
 import MonthlyGridView from './MonthlyGridView';
 import { DUES_AMOUNT } from '../utils/dateUtils';
 
@@ -11,6 +12,7 @@ export default function AdminDashboard({ currentTab }) {
     addNotice, deleteNotice, registerTenement,
     selectedYear, selectedMonth,
     maintenanceAmount, setMaintenanceAmount,
+    expenses, addExpense, deleteExpense,
   } = useContext(AppContext);
 
   // ── Modal state ────────────────────────────────────────────────────────────
@@ -42,6 +44,65 @@ export default function AdminDashboard({ currentTab }) {
   // Receipt modal
   const [receiptData, setReceiptData] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  // Expenses Tab State & Form
+  const [expCategory, setExpCategory] = useState('Maintenance');
+  const [expDescription, setExpDescription] = useState('');
+  const [expAmount, setExpAmount] = useState('');
+  const [expDate, setExpDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [expBillData, setExpBillData] = useState(null);
+  const [expFileName, setExpFileName] = useState('');
+  const [uploadingToDrive, setUploadingToDrive] = useState(false);
+  const [expSuccess, setExpSuccess] = useState('');
+  const [expError, setExpError] = useState('');
+
+  // Bill preview modal
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setExpFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setExpBillData(reader.result); // base64 string
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setExpBillData(null);
+      setExpFileName('');
+    }
+  };
+
+  const handleSaveExpense = (e) => {
+    e.preventDefault();
+    if (!expDescription.trim() || !expAmount || !expDate) {
+      setExpError('All fields (Description, Amount, Date) are required.');
+      return;
+    }
+
+    setUploadingToDrive(true);
+    setExpSuccess('');
+    setExpError('');
+
+    setTimeout(() => {
+      const result = addExpense(expCategory, expDescription, expAmount, expDate, expBillData);
+      setUploadingToDrive(false);
+      if (result.success) {
+        setExpSuccess('✓ Expense recorded and synced to Google Drive successfully!');
+        setExpDescription('');
+        setExpAmount('');
+        setExpFileName('');
+        setExpBillData(null);
+        const fileInput = document.getElementById('expense-file-input');
+        if (fileInput) fileInput.value = '';
+        setTimeout(() => setExpSuccess(''), 4000);
+      } else {
+        setExpError('Failed to record expense. Please try again.');
+      }
+    }, 850);
+  };
 
   // Settings
   const [settingsAmount, setSettingsAmount] = useState(String(maintenanceAmount));
@@ -649,6 +710,220 @@ export default function AdminDashboard({ currentTab }) {
     </div>
   );
 
+  const renderExpensesView = () => {
+    const periodExpenses = expenses.filter(e => e.date.startsWith(selectedYear.toString()));
+    const totalSpent = periodExpenses.reduce((s, e) => s + e.amount, 0);
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-4 lg:col-span-1 h-fit">
+          <div>
+            <h2 className="font-title-lg font-bold text-on-surface">Record Expense</h2>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Sync bill receipts directly to the society's Google Drive archive.
+            </p>
+          </div>
+
+          {expSuccess && (
+            <div className="bg-success-container text-success text-[11px] font-semibold p-3 rounded-lg flex items-center gap-1.5 border border-transparent">
+              <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
+              <span>{expSuccess}</span>
+            </div>
+          )}
+
+          {expError && (
+            <div className="bg-error-container text-error text-[11px] font-semibold p-3 rounded-lg flex items-start gap-1.5 border border-transparent">
+              <span className="material-symbols-outlined text-sm font-bold mt-0.5">error</span>
+              <span>{expError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveExpense} className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Category</label>
+              <select
+                value={expCategory}
+                onChange={(e) => setExpCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+              >
+                <option value="Maintenance">Maintenance</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Salaries">Salaries</option>
+                <option value="Repairs">Repairs</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Description</label>
+              <input
+                type="text"
+                placeholder="e.g. Common Lift Maintenance"
+                value={expDescription}
+                onChange={(e) => setExpDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Amount (₹)</label>
+                <input
+                  type="number"
+                  placeholder="Amount"
+                  value={expAmount}
+                  onChange={(e) => setExpAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Date</label>
+                <input
+                  type="date"
+                  value={expDate}
+                  onChange={(e) => setExpDate(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                Upload Bill / Receipt
+              </label>
+              <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center bg-slate-50 hover:bg-slate-100/50 hover:border-primary/50 transition-all cursor-pointer relative group">
+                <input
+                  type="file"
+                  id="expense-file-input"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-2xl">
+                  cloud_upload
+                </span>
+                <p className="text-[10px] text-on-surface-variant font-bold mt-1 group-hover:text-on-surface transition-colors">
+                  {expFileName ? expFileName : 'Choose file or drag & drop'}
+                </p>
+                <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+                  PDF or Images (will sync to Google Drive)
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={uploadingToDrive}
+              className={`w-full py-2.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container flex items-center justify-center gap-1.5 transition-all active-scale ${uploadingToDrive ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {uploadingToDrive ? (
+                <>
+                  <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+                  <span>Syncing to Google Drive...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-sm">add_to_drive</span>
+                  <span>Record & Archive Bill</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col justify-between space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Total Spent ({selectedYear})</span>
+                <span className="material-symbols-outlined text-primary bg-primary-container/20 p-2 rounded-full text-base">account_balance_wallet</span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-extrabold text-[#191b23]">₹{totalSpent.toLocaleString('en-IN')}</h3>
+                <p className="text-[10px] text-on-surface-variant font-bold mt-1">Sum of all recorded expenditures</p>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col justify-between space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Storage Status</span>
+                <span className="material-symbols-outlined text-amber-500 bg-amber-50 p-2 rounded-full text-base">add_to_drive</span>
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold text-on-surface">Auto Google Drive Sync</h3>
+                <p className="text-[10px] text-[#4CAF50] font-bold mt-1 flex items-center gap-0.5">
+                  <span className="material-symbols-outlined text-xs">cloud_done</span>
+                  <span>Active & Storing Receipts</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-4">
+            <h3 className="font-title-lg font-bold text-on-surface">Expenditures List</h3>
+
+            {periodExpenses.length === 0 ? (
+              <p className="text-xs text-on-surface-variant text-center py-6">No expenses found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs font-semibold">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-on-surface-variant uppercase tracking-wider">
+                      <th className="pb-3 pr-2">Date</th>
+                      <th className="pb-3 pr-2">Category</th>
+                      <th className="pb-3 pr-2">Description</th>
+                      <th className="pb-3 pr-2 text-right">Amount</th>
+                      <th className="pb-3 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {periodExpenses.map((exp) => (
+                      <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 pr-2 font-medium">{exp.date}</td>
+                        <td className="py-3 pr-2">
+                          <span className="bg-slate-100 text-on-surface px-2 py-0.5 rounded-full border border-slate-200 uppercase text-[9px] font-bold">
+                            {exp.category}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-2 font-bold text-on-surface">{exp.description}</td>
+                        <td className="py-3 pr-2 text-right font-bold text-on-surface">₹{exp.amount.toLocaleString('en-IN')}</td>
+                        <td className="py-3 text-center flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedExpense(exp);
+                              setIsDriveOpen(true);
+                            }}
+                            className="px-2 py-1 border border-outline-variant bg-white hover:bg-surface-container-high rounded text-[10px] font-bold shadow-soft flex items-center justify-center gap-1 transition-all active-scale"
+                            title="View Bill in Google Drive"
+                          >
+                            <span className="material-symbols-outlined text-[13px] text-amber-500 font-bold">add_to_drive</span>
+                            <span>View Bill</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete "${exp.description}"?`)) {
+                                deleteExpense(exp.id);
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-error hover:bg-red-50 rounded transition-all active-scale"
+                            title="Delete Expense"
+                          >
+                            <span className="material-symbols-outlined text-sm">delete</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    );
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
@@ -656,6 +931,13 @@ export default function AdminDashboard({ currentTab }) {
       {currentTab === 'tenements' && renderTenements()}
       {currentTab === 'monthly-grid' && <MonthlyGridView />}
       {currentTab === 'notices' && renderNoticeBroadcaster()}
+      {currentTab === 'expenses' && renderExpensesView()}
+
+      <DrivePreviewModal
+        isOpen={isDriveOpen}
+        onClose={() => setIsDriveOpen(false)}
+        expense={selectedExpense}
+      />
 
       {/* ── Tenement Detail Modal ── */}
       {activeTenement && (

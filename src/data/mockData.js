@@ -122,3 +122,42 @@ export const mockUsers = [
     name: t.ownerName,
   })),
 ];
+
+export const initialExpenses = [
+  {
+    id: "E1",
+    category: "Maintenance",
+    description: "Lift Servicing & Lubrication",
+    amount: 3200,
+    date: "2026-07-05",
+    driveLink: "https://drive.google.com/file/d/gd-mock-lift/view",
+    billData: null
+  },
+  {
+    id: "E2",
+    category: "Salaries",
+    description: "Security Guard Salary (July)",
+    amount: 12000,
+    date: "2026-07-02",
+    driveLink: "https://drive.google.com/file/d/gd-mock-security/view",
+    billData: null
+  },
+  {
+    id: "E3",
+    category: "Utilities",
+    description: "Common Area Electricity Bill",
+    amount: 4500,
+    date: "2026-07-08",
+    driveLink: "https://drive.google.com/file/d/gd-mock-electricity/view",
+    billData: null
+  },
+  {
+    id: "E4",
+    category: "Repairs",
+    description: "Water Tank Valve Replacement",
+    amount: 1800,
+    date: "2026-07-12",
+    driveLink: "https://drive.google.com/file/d/gd-mock-valve/view",
+    billData: null
+  }
+];
