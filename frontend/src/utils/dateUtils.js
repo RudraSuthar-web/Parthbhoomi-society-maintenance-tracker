@@ -28,7 +28,24 @@ export const ALL_MONTHS = MONTH_NAMES;
 export const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 /** Standard maintenance amount (₹) */
-export const DUES_AMOUNT = 1200;
+export const DUES_AMOUNT = 500;
+
+/** 1-based index of current month (e.g. July → 7) */
+export const CURRENT_MONTH_IDX = new Date().getMonth() + 1;
+
+/**
+ * How many months are "billed" (i.e. should have been paid) for a given year.
+ * - Past year  → always 12
+ * - Current year → months elapsed so far (1–12)
+ * - Future year  → 0  (nothing is due yet)
+ */
+export const getBilledMonths = (year) => {
+  const y = Number(year);
+  const cy = new Date().getFullYear();
+  if (y < cy) return 12;
+  if (y > cy) return 0;
+  return new Date().getMonth() + 1; // 1-based
+};
 
 /**
  * Formats a date string (YYYY-MM-DD) to a human-readable Indian locale date.

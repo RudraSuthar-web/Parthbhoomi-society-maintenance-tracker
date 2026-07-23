@@ -1,6 +1,13 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { CURRENT_MONTH, CURRENT_YEAR, formatDate } from '../utils/dateUtils';
+import { ALL_MONTHS, CURRENT_MONTH, CURRENT_YEAR, formatDate, getBilledMonths } from '../utils/dateUtils';
+
+/**
+ * TenementModal — Full popup card for a single tenement
+ * Shows owner info, selected-month status, yearly stats,
+ * 12-month payment grid with toggle + receipt access.
+ */
+import DeleteTenementModal from './admin/DeleteTenementModal';
 
 /**
  * TenementModal — Full popup card for a single tenement
@@ -13,11 +20,12 @@ export default function TenementModal({
   onTogglePayment,   // fn(tenementNumber, month, currentStatus, year)
   onOpenReceipt,     // fn(tenement, monthDue)
 }) {
-  const { selectedYear, availableYears, selectedMonth, maintenanceAmount } = useContext(AppContext);
+  const { selectedYear, availableYears, selectedMonth, maintenanceAmount, user, deleteTenement } = useContext(AppContext);
 
   // Modal has its own local year/month that syncs with global selection
   const [modalYear, setModalYear] = useState(selectedYear);
   const [modalMonth, setModalMonth] = useState(selectedMonth);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => { setModalYear(selectedYear); }, [selectedYear]);
   useEffect(() => { setModalMonth(selectedMonth); }, [selectedMonth]);
@@ -25,7 +33,9 @@ export default function TenementModal({
   if (!tenement) return null;
 
   // ── Compute from modalYear (not CURRENT_YEAR) ──────────────────────────────
-  const yearDues = tenement.dues.filter(d => d.year === modalYear);
+  const yearDues = tenement.dues
+    .filter(d => d.year === modalYear)
+    .sort((a, b) => ALL_MONTHS.indexOf(a.month) - ALL_MONTHS.indexOf(b.month));
   const currentDue = yearDues.find(d => d.month === modalMonth);
   const paidMonths = yearDues.filter(d => d.status === 'Paid');
   const partialMonths = yearDues.filter(d => d.status === 'Partial');
@@ -33,6 +43,7 @@ export default function TenementModal({
   const paidCount = paidMonths.length;
   const unpaidCount = unpaidMonths.length;
   const partialCount = partialMonths.length;
+  const billedMonths = getBilledMonths(modalYear);
 
   const isCurrentPaid = currentDue?.status === 'Paid';
   const isCurrentPartial = currentDue?.status === 'Partial';
@@ -79,10 +90,13 @@ export default function TenementModal({
             <span className="material-symbols-outlined text-white text-lg">close</span>
           </button>
 
-          <div className="flex items-start gap-4">
-            {/* Unit badge */}
-            <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-extrabold text-2xl flex-shrink-0 shadow-inner">
-              {tenement.tenementNumber}
+          <div className="flex items-start gap-4 mr-8 ">
+            {/* Unit badge with exact full-size status icon overlay */}
+            <div className="relative flex-shrink-0 w-14 h-14">
+              <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-extrabold text-2xl shadow-inner">
+                {tenement.tenementNumber}
+              </div>
+              
             </div>
 
             <div className="flex-1 min-w-0">
@@ -97,7 +111,7 @@ export default function TenementModal({
             </div>
 
             {/* Current month status — uses modalMonth + modalYear (not hardcoded CURRENT_MONTH) */}
-            <div className="flex flex-col items-end justify-end">
+            <div className="flex flex-col items-end justify-end ">
               <p className={`text-sm text-right font-extrabold ${isCurrentPaid ? 'text-emerald-300'
                   : isCurrentPartial ? 'text-amber-300'
                     : 'text-red-300'
@@ -163,14 +177,17 @@ export default function TenementModal({
                 return (
                   <div
                     key={due.month}
-                    onClick={() => !isUnbilled && onTogglePayment(tenement.tenementNumber, due.month, due.status, modalYear)}
+                    onClick={() => {
+                      setModalMonth(due.month);
+                      onTogglePayment(tenement.tenementNumber, due.month, due.status, modalYear);
+                    }}
                     className={`
                       cursor-pointer relative rounded-xl border p-3 flex flex-col gap-2
                       transition-all duration-150
                       ${isPaid ? 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : ''}
                       ${isPartial ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' : ''}
                       ${isUnpaid ? 'bg-red-50 border-red-200 hover:bg-red-100' : ''}
-                      ${isUnbilled ? 'bg-slate-50 border-slate-200 opacity-60 cursor-default' : ''}
+                      ${isUnbilled ? 'bg-slate-50 border-slate-200 opacity-60 hover:bg-slate-100' : ''}
                       ${isCurrent ? 'ring-2 ring-primary ring-offset-1' : ''}
                     `}
                   >
@@ -233,26 +250,50 @@ export default function TenementModal({
         <div className="flex-shrink-0 px-5 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
           <div className="text-xs text-on-surface-variant font-medium space-y-0.5">
             <div>
-              <span className="font-bold text-on-surface">₹{totalCollected.toLocaleString('en-IN')}</span>
+              <span className="font-bold text-[18px] text-on-surface">₹{totalCollected.toLocaleString('en-IN')}</span>
               {' '}collected · FY {modalYear}
             </div>
             {partialCount > 0 && (
               <div className="text-[10px] text-amber-600 font-bold">{partialCount} partial · {unpaidCount} unpaid</div>
             )}
             {partialCount === 0 && unpaidCount > 0 && (
-              <div className="text-[10px] text-error font-bold">{unpaidCount} month{unpaidCount !== 1 ? 's' : ''} unpaid</div>
+              <div className="text-[12px] text-error font-bold">{unpaidCount} month{unpaidCount !== 1 ? 's' : ''} unpaid</div>
             )}
             {paidCount === 12 && (
-              <div className="text-[10px] text-emerald-600 font-bold">✓ All 12 months paid!</div>
+              <div className="text-[10px] text-emerald-600 font-bold">✓ All {billedMonths} months paid!</div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-white text-slate-800 text-xs font-bold rounded-xl border border-slate-400/30 transition-all active-scale"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => setIsDeleting(true)}
+                className="px-3.5 py-2 bg-red-50 text-error border border-red-200 hover:bg-red-100 text-xs font-bold rounded-xl transition-all active-scale flex items-center gap-1"
+                title="Delete this tenement entry"
+              >
+                <span className="material-symbols-outlined text-base">delete</span>
+                Delete Unit
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-5 py-2 bg-white text-slate-800 text-xs font-bold rounded-xl border border-slate-400/30 transition-all active-scale"
+            >
+              Close
+            </button>
+          </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <DeleteTenementModal
+          tenement={isDeleting ? tenement : null}
+          onConfirm={() => {
+            deleteTenement(tenement.tenementNumber);
+            setIsDeleting(false);
+            onClose();
+          }}
+          onCancel={() => setIsDeleting(false)}
+        />
 
       </div>
     </div>

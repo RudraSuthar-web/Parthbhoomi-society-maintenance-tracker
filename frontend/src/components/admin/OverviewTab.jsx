@@ -1,0 +1,220 @@
+import React from 'react';
+import AlertBanner from '../ui/AlertBanner';
+import EmptyState from '../ui/EmptyState';
+
+/**
+ * OverviewTab — Admin "Global Overview" tab.
+ * Displays KPIs, maintenance amount setting, defaulters grid, and bulletin preview.
+ */
+export default function OverviewTab({
+  selectedMonth, selectedYear,
+  totalTenementsCount,
+  currentMonthPaid, currentMonthUnpaid,
+  totalCollectedDisplay, totalPendingThisMonth,
+  collectionRate,
+  defaulterTenements,
+  notices,
+  maintenanceAmount,
+  settingsAmount, setSettingsAmount,
+  settingsSuccess, settingsError,
+  onSaveSettings,
+  onOpenTenement,
+}) {
+  return (
+    <div className="space-y-6 animate-fadeIn">
+
+      {/* Page header */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display-lg text-on-surface">Society Overview</h2>
+          <p className="text-xs text-on-surface-variant mt-1">
+            Maintenance fund summary for{' '}
+            <span className="font-bold text-on-surface">{selectedMonth} {selectedYear}</span>
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg flex-shrink-0">
+          <span className="material-symbols-outlined text-primary text-sm">calendar_today</span>
+          <span className="text-xs font-bold text-primary">{selectedMonth} {selectedYear}</span>
+        </div>
+      </div>
+
+      {/* Maintenance Amount setting */}
+      <div className="bg-white border border-black-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-black-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-black-600 text-[18px]">tune</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-on-surface">Maintenance Amount</h3>
+              <p className="text-xs text-on-surface-variant">
+                Currently{' '}
+                <span className="font-bold text-blue-700 text-[18px]">₹{maintenanceAmount.toLocaleString('en-IN')}</span>
+                {' '}/ month
+              </p>
+            </div>
+          </div>
+          <form onSubmit={onSaveSettings} className="flex items-center gap-2">
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">₹</span>
+              <input
+                type="number"
+                value={settingsAmount}
+                onChange={e => setSettingsAmount(e.target.value)}
+                className="pl-6 pr-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-sm font-semibold focus:outline-none focus:border-black-400 transition-all w-28"
+                min="1"
+                placeholder="500"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 border border-2 text-xs font-bold rounded-lg bg-blue-700 text-white transition-all active-scale"
+            >
+              Update
+            </button>
+          </form>
+        </div>
+        <AlertBanner type="success" message={settingsSuccess} />
+        <AlertBanner type="error"   message={settingsError} />
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Collected */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col gap-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
+                {selectedMonth} Collection
+              </span>
+              <h3 className="text-3xl font-extrabold text-on-surface tracking-tight">
+                ₹{totalCollectedDisplay.toLocaleString('en-IN')}
+              </h3>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs text-on-surface-variant font-semibold">
+                {currentMonthPaid.length}/{totalTenementsCount} fully paid
+              </span>
+              <span className="text-xs font-bold text-emerald-600">{collectionRate}%</span>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                style={{ width: `${collectionRate}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Outstanding */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col gap-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
+                Outstanding Dues
+              </span>
+              <h3 className="text-3xl font-extrabold text-error tracking-tight">
+                ₹{totalPendingThisMonth.toLocaleString('en-IN')}
+              </h3>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-error text-[18px]">hourglass_empty</span>
+            </div>
+          </div>
+          <p className="text-sm text-on-surface-variant font-semibold mt-2">
+            <span className="font-bold text-on-surface">{currentMonthUnpaid.length}</span>{' '}
+            tenement{currentMonthUnpaid.length !== 1 ? 's' : ''} yet to fully pay for {selectedMonth}
+          </p>
+        </div>
+      </div>
+
+      {/* Defaulters grid */}
+      {totalTenementsCount > 0 && (
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft">
+        {defaulterTenements.length === 0   ? (
+          <div className="flex items-center bg-emerald-500 rounded-xl p-3 justify-between">
+            <div className="flex gap-2 items-center">
+              <span className="material-symbols-outlined text-white">verified</span>
+              <h3 className="font-title-lg font-bold text-white">All {totalTenementsCount} tenements have paid</h3>
+            </div>
+            <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center bg-error rounded-t-xl p-3 justify-between">
+              <h3 className="font-title-lg font-bold text-white">
+                <span className="font-bold text-white text-[20px]">{defaulterTenements.length}</span> Unpaid
+              </h3>
+              <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-3 p-6">
+              {defaulterTenements.map(t => {
+                const due = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
+                const isPartial = due?.status === 'Partial';
+                return (
+                  <button
+                    key={t.tenementNumber}
+                    onClick={() => onOpenTenement(t.tenementNumber)}
+                    className={`
+                      group relative aspect-square flex flex-col items-center justify-center
+                      border-2 rounded-2xl active:scale-95 transition-all duration-150
+                      cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2
+                      ${isPartial
+                        ? 'bg-amber-50 border-amber-300 hover:bg-amber-100 hover:border-amber-500 focus:ring-amber-400'
+                        : 'bg-red-50 border-red-200 hover:bg-red-100 hover:border-error hover:shadow-lg hover:shadow-red-100 focus:ring-error'
+                      }
+                    `}
+                    aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
+                    title={`${t.ownerName} · ${due?.status} · Tap to view`}
+                  >
+                    <span className={`text-2xl sm:text-3xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
+                      {t.tenementNumber}
+                    </span>
+                    {isPartial && (
+                      <span className="text-[8px] font-bold text-amber-600 uppercase">Partial</span>
+                    )}
+                    <span className="
+                      absolute bottom-0 left-0 right-0 bg-black/50 text-white
+                      text-[15px] font-bold text-center py-1 rounded-b-xl
+                      opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate px-1
+                    ">
+                      {t.ownerName.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>)}
+
+      {/* Bulletin preview */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-title-lg font-bold text-on-surface">Active Bulletin Board</h3>
+          <span className="text-[12px] font-bold text-on-surface-variant bg-slate-50 border border-slate-200 rounded-full px-2.5 py-0.5">
+            {notices.length} notice{notices.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {notices.length === 0 ? (
+          <EmptyState icon="campaign" message="No active notices published." />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {notices.slice(0, 3).map(notice => (
+              <div key={notice.id} className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                <span className="text-[12px] font-bold uppercase text-on-surface-variant">{notice.date}</span>
+                <h4 className="font-bold text-[15px] text-on-surface leading-tight truncate">{notice.title}</h4>
+                <p className="text-[15px] text-on-surface-variant line-clamp-2 leading-relaxed">{notice.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

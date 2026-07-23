@@ -13,12 +13,13 @@ export default function Login({ navigate }) {
   const [showSignInPw, setShowSignInPw] = useState(false);
 
   // Register
-  const [regUnit, setRegUnit]                   = useState('');
-  const [regContact, setRegContact]             = useState('');
-  const [regPassword, setRegPassword]           = useState('');
+  const [regUnit, setRegUnit]                       = useState('');
+  const [regName, setRegName]                       = useState('');
+  const [regContact, setRegContact]                 = useState('');
+  const [regPassword, setRegPassword]               = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
-  const [showRegPw, setShowRegPw]               = useState(false);
-  const [showRegConfirmPw, setShowRegConfirmPw] = useState(false);
+  const [showRegPw, setShowRegPw]                   = useState(false);
+  const [showRegConfirmPw, setShowRegConfirmPw]     = useState(false);
 
   const [errorMsg, setErrorMsg]     = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -33,7 +34,7 @@ export default function Login({ navigate }) {
 
   const clearMessages = () => { setErrorMsg(''); setSuccessMsg(''); };
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password) {
       setErrorMsg('Please enter both Tenement/Admin ID and password.');
@@ -42,21 +43,23 @@ export default function Login({ navigate }) {
     setIsSubmitting(true);
     clearMessages();
 
-    // Slight delay for UX (simulate network)
-    setTimeout(() => {
-      const result = login(username, password);
+    try {
+      const result = await login(username, password);
       setIsSubmitting(false);
-      if (result.success) {
+      if (result && result.success) {
         navigate(result.user.role === 'admin' ? 'overview' : 'dashboard');
       } else {
-        setErrorMsg(result.message);
+        setErrorMsg(result?.message || 'Invalid credentials. Please try again.');
       }
-    }, 350);
+    } catch (err) {
+      setIsSubmitting(false);
+      setErrorMsg('Login request failed. Please check backend connection.');
+    }
   };
 
   const handleRegister = (e) => {
     e.preventDefault();
-    if (!regUnit.trim() || !regContact.trim() || !regPassword || !regConfirmPassword) {
+    if (!regUnit.trim() || !regName.trim() || !regContact.trim() || !regPassword || !regConfirmPassword) {
       setErrorMsg('Please fill in all registration fields.');
       return;
     }
@@ -87,7 +90,7 @@ export default function Login({ navigate }) {
     clearMessages();
 
     setTimeout(() => {
-      const result = registerTenement(regUnit, regContact, regPassword);
+      const result = registerTenement(regUnit, regName, regContact, regPassword);
       setIsSubmitting(false);
       if (result.success) {
         setSuccessMsg('Registration successful! Signing you in…');
@@ -110,9 +113,7 @@ export default function Login({ navigate }) {
       
       {/* Brand */}
       <div className="flex flex-col items-center mb-7 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center mb-4 shadow-lg">
-          <span className="material-symbols-outlined text-4xl">domain</span>
-        </div>
+        
         <h1 className="font-display-lg text-on-surface font-extrabold tracking-tight leading-none">
           Parthbhoomi
         </h1>
@@ -126,7 +127,7 @@ export default function Login({ navigate }) {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200">
-          {['signin'].map((tab) => (
+          {['signin', 'register'].map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); clearMessages(); }}
@@ -136,8 +137,9 @@ export default function Login({ navigate }) {
                   : 'text-on-surface-variant hover:text-on-surface bg-slate-50 hover:bg-white'
               }`}
             >
-              {tab = 'Sign In'}
+              {tab === 'signin' ? 'Sign In' : 'Register'}
             </button>
+            
           ))}
         </div>
 
@@ -223,9 +225,22 @@ export default function Login({ navigate }) {
             </form>
           )}
 
-          {/* ── REGISTER FORM ──
+          {/* ── REGISTER FORM ── */}
           {activeTab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4 animate-fadeIn" noValidate>
+              <div>
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                  Resident Full Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rohan Mehta"
+                  value={regName}
+                  onChange={(e) => { setRegName(e.target.value); setErrorMsg(''); }}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
@@ -327,63 +342,14 @@ export default function Login({ navigate }) {
                 )}
               </button>
             </form>
-          )} */}
+          )}
 
-          {/* Demo presets */}
-          <div className="pt-4 border-t border-slate-100 space-y-2">
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-              Demo Access
-            </p>
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                {
-                  id: 'unit42',
-                  label: 'Unit 42 — Rohan Mehta',
-                  sub: 'Resident · Unpaid state',
-                  icon: 'home',
-                  iconColor: 'text-amber-500',
-                  u: '42',
-                  p: 'password',
-                },
-                {
-                  id: 'admin01',
-                  label: 'ADMIN-01 — Treasurer',
-                  sub: 'Administrator Dashboard',
-                  icon: 'shield_person',
-                  iconColor: 'text-primary',
-                  u: 'ADMIN-01',
-                  p: 'password',
-                },
-              ].map((preset) => (
-                <button
-                  key={preset.id}
-                  id={preset.id}
-                  onClick={() => setDemoCredentials(preset.u, preset.p)}
-                  className="flex items-center justify-between text-left p-3 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 rounded-xl border border-slate-200 transition-all active-scale group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className={`material-symbols-outlined text-lg ${preset.iconColor}`}>{preset.icon}</span>
-                    <div>
-                      <p className="text-xs font-bold text-on-surface">{preset.label}</p>
-                      <p className="text-[10px] text-on-surface-variant">{preset.sub}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold bg-white border border-slate-200 text-primary group-hover:bg-primary group-hover:text-white group-hover:border-primary px-2.5 py-1 rounded-lg transition-all">
-                    Use Preset
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+        
         </div>
       </div>
 
       {/* Footer */}
-      <p className="text-[11px] text-on-surface-variant font-medium mt-6 max-w-xs text-center leading-relaxed">
-        Demo system. No real payments processed. Default password:{' '}
-        <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">password</code>
-      </p>
-      <p className="text-[10px] text-slate-400 mt-2">© {CURRENT_YEAR} Parthbhoomi CHS · All rights reserved</p>
+      <p className="text-[15px] text-slate-400 mt-5">© {CURRENT_YEAR} Parthbhoomi CHS · All rights reserved</p>
     </div>
   );
 }

@@ -1,0 +1,65 @@
+import React from 'react';
+
+/**
+ * DeleteTenementModal — Confirmation dialog before deleting a tenement.
+ */
+export default function DeleteTenementModal({
+  tenement,
+  onConfirm,
+  onCancel,
+}) {
+  if (!tenement) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white max-w-md w-full rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-5 animate-scaleIn"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-red-100 text-error flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined text-2xl">delete_forever</span>
+          </div>
+          <div>
+            <h3 className="font-headline-md text-on-surface font-extrabold leading-tight">
+              Delete Tenement Unit {tenement.tenementNumber}?
+            </h3>
+            <p className="text-xs text-on-surface-variant font-semibold mt-0.5">
+              {tenement.ownerName}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-red-50 border border-red-200 text-error rounded-xl text-sm space-y-1">
+          <p className="font-bold flex items-center gap-1.5">
+            Permanent Action Warning
+          </p>
+          <p className="text-[15px] text-black leading-relaxed font-medium">
+            This will permanently remove <span className="font-bold text-[18px] text-error ">Unit {tenement.tenementNumber} ({tenement.ownerName})</span> ,<br></br> all its 12-month maintenance dues, payment installments, and resident login account from the database.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 bg-white text-slate-700 border border-slate-200 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all active-scale"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-4 py-2 bg-error text-white text-xs font-bold rounded-xl shadow-soft hover:bg-red-700 transition-all active-scale flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-sm">delete</span>
+            Delete Tenement
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
