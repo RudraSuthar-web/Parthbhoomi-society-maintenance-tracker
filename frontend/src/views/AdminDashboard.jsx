@@ -1,4 +1,4 @@
-import React, { useContext, useState, useCallback } from 'react';
+import React, { useContext, useState, useCallback, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 
 import OverviewTab            from '../components/admin/OverviewTab';
@@ -21,7 +21,6 @@ export default function AdminDashboard({ currentTab }) {
     selectedYear, selectedMonth,
     maintenanceAmount, setMaintenanceAmount,
     expenses, addExpense, deleteExpense,
-
   } = useContext(AppContext);
 
   // ── Tenement modal ──────────────────────────────────────────────────────────
@@ -78,7 +77,7 @@ export default function AdminDashboard({ currentTab }) {
     }
   };
 
-  const handleSaveExpense = (e) => {
+  const handleSaveExpense = async (e) => {
     e.preventDefault();
     if (!expDescription.trim() || !expAmount || !expDate) {
       setExpError('All fields (Description, Amount, Date) are required.');
@@ -89,8 +88,8 @@ export default function AdminDashboard({ currentTab }) {
     setExpSuccess('');
     setExpError('');
 
-    setTimeout(() => {
-      const result = addExpense(expCategory, expDescription, expAmount, expDate, expBillData);
+    try {
+      const result = await addExpense(expCategory, expDescription, expAmount, expDate, expBillData, expFileName);
       setUploadingToDrive(false);
       if (result.success) {
         setExpSuccess('✓ Expense recorded and synced to Google Drive successfully!');
@@ -107,7 +106,10 @@ export default function AdminDashboard({ currentTab }) {
       } else {
         setExpError('Failed to record expense. Please try again.');
       }
-    }, 850);
+    } catch (err) {
+      setUploadingToDrive(false);
+      setExpError('Failed to record expense. Please try again.');
+    }
   };
 
   const handleConfirmDeleteTenement = () => {
@@ -174,7 +176,7 @@ export default function AdminDashboard({ currentTab }) {
 
   const filteredTenements = tenements
     .filter(t =>
-      t.tenementNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(t.tenementNumber).toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
@@ -192,6 +194,7 @@ export default function AdminDashboard({ currentTab }) {
     setSettingsError('');
     setTimeout(() => setSettingsSuccess(''), 3000);
   };
+
 
   const handleBroadcastNotice = e => {
     e.preventDefault();

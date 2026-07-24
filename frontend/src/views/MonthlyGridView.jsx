@@ -21,7 +21,7 @@ export default function MonthlyGridView() {
   // ── Filter + Sort ────────────────────────────────────────────────────────────
   const sorted = useMemo(() => {
     const filtered = tenements.filter(t =>
-      t.tenementNumber.toLowerCase().includes(search.toLowerCase()) ||
+      String(t.tenementNumber).toLowerCase().includes(search.toLowerCase()) ||
       t.ownerName.toLowerCase().includes(search.toLowerCase())
     );
     return [...filtered].sort((a, b) => {

@@ -320,9 +320,9 @@ export async function getExpenses() {
 /**
  * Add a new expense in Supabase
  */
-export async function createExpenseBackend(category, description, amount, date, billData) {
-  const id = "E" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-  const driveLink = `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`;
+export async function createExpenseBackend(category, description, amount, date, billData, customDriveLink = null, customId = null) {
+  const id = customId || ("E" + Date.now() + "-" + Math.floor(Math.random() * 1000));
+  const driveLink = customDriveLink || `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`;
   const newExpense = {
     id,
     category,

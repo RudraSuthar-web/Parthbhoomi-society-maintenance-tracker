@@ -73,7 +73,6 @@ export default function OverviewTab({
         <AlertBanner type="success" message={settingsSuccess} />
         <AlertBanner type="error"   message={settingsError} />
       </div>
-
       {/* KPI row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Collected */}

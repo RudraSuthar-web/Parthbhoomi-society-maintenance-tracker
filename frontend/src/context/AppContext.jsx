@@ -362,6 +362,25 @@ export const AppProvider = ({ children }) => {
     deleteTenementBackend(tenementNumber);
   };
 
+  // ── Google Drive API Settings ──────────────────────────────────────────────
+  const [gdriveScriptUrl, setGdriveScriptUrlState] = useState(() => {
+    return localStorage.getItem('society_gdrive_script_url') || import.meta.env.VITE_APPS_SCRIPT_URL || '';
+  });
+
+  const [gdriveFolderId, setGdriveFolderIdState] = useState(() => {
+    return localStorage.getItem('society_gdrive_folder_id') || import.meta.env.VITE_APPS_SCRIPT_FOLDER_ID || '';
+  });
+
+  const setGdriveScriptUrl = (url) => {
+    setGdriveScriptUrlState(url);
+    localStorage.setItem('society_gdrive_script_url', url);
+  };
+
+  const setGdriveFolderId = (folderId) => {
+    setGdriveFolderIdState(folderId);
+    localStorage.setItem('society_gdrive_folder_id', folderId);
+  };
+
   // ── Expenses State (Supabase / Backend) ────────────────────────────────────
   const [expenses, setExpenses] = useState([]);
 
@@ -372,9 +391,37 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // ── Expenses Actions ───────────────────────────────────────────────────────
-  const addExpense = (category, description, amount, date, billData) => {
+  const addExpense = async (category, description, amount, date, billData, fileName) => {
+    let driveLink = `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`;
+    
+    // If a Google Apps Script URL is set and we have a file, upload it!
+    if (billData && gdriveScriptUrl) {
+      try {
+        const response = await fetch(gdriveScriptUrl, {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          },
+          body: JSON.stringify({
+            fileData: billData,
+            fileName: fileName || `${description.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}.jpg`,
+            mimeType: billData.split(';')[0].split(':')[1] || 'image/jpeg',
+            folderId: (gdriveFolderId && gdriveFolderId !== 'undefined' && gdriveFolderId !== 'null') ? gdriveFolderId : ''
+          })
+        });
+        const resData = await response.json();
+        if (resData && resData.success && resData.webViewLink) {
+          driveLink = resData.webViewLink;
+        } else if (resData && !resData.success) {
+          console.error("Apps Script Upload returned failure status:", resData.message);
+        }
+      } catch (err) {
+        console.error("Google Drive API upload failed, falling back to simulated link:", err);
+      }
+    }
+
     const id = "E" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-    const driveLink = `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`;
     const newExpense = {
       id,
       category,
@@ -384,8 +431,9 @@ export const AppProvider = ({ children }) => {
       driveLink,
       billData
     };
+    
     setExpenses(prev => [newExpense, ...prev]);
-    createExpenseBackend(category, description, amount, date, billData);
+    createExpenseBackend(category, description, amount, date, billData, driveLink, id);
     return { success: true, expense: newExpense };
   };
 
@@ -421,6 +469,10 @@ export const AppProvider = ({ children }) => {
         expenses,
         addExpense,
         deleteExpense,
+        gdriveScriptUrl,
+        setGdriveScriptUrl,
+        gdriveFolderId,
+        setGdriveFolderId,
       }}
     >
       {children}
