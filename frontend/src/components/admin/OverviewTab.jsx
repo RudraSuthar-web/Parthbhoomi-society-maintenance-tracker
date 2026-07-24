@@ -73,6 +73,7 @@ export default function OverviewTab({
         <AlertBanner type="success" message={settingsSuccess} />
         <AlertBanner type="error"   message={settingsError} />
       </div>
+
       {/* KPI row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Collected */}
@@ -116,20 +117,33 @@ export default function OverviewTab({
             </div>
           </div>
           <p className="text-sm text-on-surface-variant font-semibold mt-2">
-            <span className="font-bold text-on-surface">{currentMonthUnpaid.length}</span>{' '}
-            tenement{currentMonthUnpaid.length !== 1 ? 's' : ''} yet to fully pay for {selectedMonth}
+            {currentMonthPaid.length === 0 && currentMonthUnpaid.length === 0 ? (
+              <span className="text-slate-500 font-medium">Billing has not started for {selectedMonth}</span>
+            ) : (
+              <>
+                <span className="font-bold text-on-surface">{currentMonthUnpaid.length}</span>{' '}
+                tenement{currentMonthUnpaid.length !== 1 ? 's' : ''} yet to fully pay for {selectedMonth}
+              </>
+            )}
           </p>
         </div>
       </div>
 
-      {/* Defaulters grid */}
+      {/* Defaulters grid / Status banner */}
       {totalTenementsCount > 0 && (
       <div className="bg-white border border-slate-200 rounded-xl shadow-soft">
-        {defaulterTenements.length === 0   ? (
+        {currentMonthPaid.length === totalTenementsCount ? (
           <div className="flex items-center bg-emerald-500 rounded-xl p-3 justify-between">
             <div className="flex gap-2 items-center">
               <span className="material-symbols-outlined text-white">verified</span>
               <h3 className="font-title-lg font-bold text-white">All {totalTenementsCount} tenements have paid</h3>
+            </div>
+            <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
+          </div>
+        ) : defaulterTenements.length === 0 ? (
+          <div className="flex items-center bg-slate-500 rounded-xl p-3 justify-between">
+            <div className="flex gap-2 items-center">
+              <h3 className="font-title-lg font-bold text-white">Billing has not started for {selectedMonth} {selectedYear}</h3>
             </div>
             <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
           </div>
@@ -161,7 +175,7 @@ export default function OverviewTab({
                     aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
                     title={`${t.ownerName} · ${due?.status} · Tap to view`}
                   >
-                    <span className={`text-xl sm:text-  xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
+                    <span className={`text-xl sm:text-xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
                       {t.tenementNumber}
                     </span>
                     {isPartial && (

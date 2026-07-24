@@ -12,12 +12,20 @@ export const AppContext = createContext();
 
 // ── Helper: compute due status from installments ──────────────────────────────
 export function computeDueStatus(due, maintenanceAmount) {
-  if (due.status === 'Unbilled') return 'Unbilled';
-  const installments = due.installments || [];
-  const totalPaid = installments.reduce((s, i) => s + (i.amount || 0), 0);
-  if (totalPaid <= 0) return 'Unpaid';
-  if (totalPaid >= maintenanceAmount) return 'Paid';
-  return 'Partial';
+  if (due.status === 'Paid') return 'Paid';
+  if (due.amountPaid > 0 && due.amountPaid >= maintenanceAmount) return 'Paid';
+  if (due.amountPaid > 0 && due.amountPaid < maintenanceAmount) return 'Partial';
+
+  // Dynamic Future Month Rule:
+  const now = new Date();
+  const cy = now.getFullYear();
+  const cmIdx = now.getMonth(); // 0-indexed (July = 6)
+  const mIdx = ALL_MONTHS.indexOf(due.month);
+
+  const isFuture = (due.year > cy) || (due.year === cy && mIdx > cmIdx);
+  if (isFuture) return 'Unbilled';
+
+  return due.status || 'Unpaid';
 }
 
 // ── Helper: migrate legacy dues to installments format ────────────────────────
@@ -80,11 +88,17 @@ export const AppProvider = ({ children }) => {
       if (fetched && fetched.length > 0) {
         setTenements(fetched.map(t => ({
           ...t,
-          dues: t.dues.map(d => migrateDue({ ...d, year: d.year || 2026 })),
+          dues: t.dues.map(d => {
+            const migrated = migrateDue({ ...d, year: d.year || 2026 });
+            return {
+              ...migrated,
+              status: computeDueStatus(migrated, maintenanceAmount),
+            };
+          }),
         })));
       }
     });
-  }, []);
+  }, [maintenanceAmount]);
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
@@ -431,7 +445,6 @@ export const AppProvider = ({ children }) => {
       driveLink,
       billData
     };
-    
     setExpenses(prev => [newExpense, ...prev]);
     createExpenseBackend(category, description, amount, date, billData, driveLink, id);
     return { success: true, expense: newExpense };

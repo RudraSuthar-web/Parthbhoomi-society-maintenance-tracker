@@ -55,8 +55,8 @@ export function MonthHeaderCell({ month, monthIdx, monthStats, selectedYear }) {
 
   return (
     <th
-      className={`border-b border-r border-slate-200 px-0.5 sm:px-1 py-2 text-center align-bottom select-none min-w-[50px] sm:min-w-[64px] ${
-        isCurrentMonth ? 'bg-blue-50' : ''
+      className={`sticky top-0 z-30 border-b border-r border-slate-200 px-0.5 sm:px-1 py-2 text-center align-bottom select-none min-w-[50px] sm:min-w-[64px] ${
+        isCurrentMonth ? 'bg-blue-100/90 backdrop-blur-sm' : 'bg-slate-100/90 backdrop-blur-sm'
       }`}
     >
       <div className="flex flex-col items-center gap-1">
