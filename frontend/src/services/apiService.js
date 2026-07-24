@@ -276,6 +276,107 @@ export async function deleteNoticeById(id) {
 }
 
 /**
+ * Fetch all expenses from Supabase
+ */
+export async function getExpenses() {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        return data.map(e => ({
+          id: e.id,
+          category: e.category,
+          description: e.description,
+          amount: Number(e.amount),
+          date: e.date,
+          driveLink: e.drive_link || `https://drive.google.com/file/d/gd-${e.id}/view`,
+          billData: e.bill_data,
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase fetch expenses error:', e);
+    }
+  }
+
+  const data = await apiFetch('/expenses');
+  if (Array.isArray(data)) {
+    return data.map(e => ({
+      id: e.id,
+      category: e.category,
+      description: e.description,
+      amount: Number(e.amount),
+      date: e.date,
+      driveLink: e.drive_link || `https://drive.google.com/file/d/gd-${e.id}/view`,
+      billData: e.bill_data,
+    }));
+  }
+
+  return [];
+}
+
+/**
+ * Add a new expense in Supabase
+ */
+export async function createExpenseBackend(category, description, amount, date, billData) {
+  const id = "E" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+  const driveLink = `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`;
+  const newExpense = {
+    id,
+    category,
+    description: description.trim(),
+    amount: Number(amount),
+    date,
+    driveLink,
+    billData,
+  };
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('expenses').insert([
+        {
+          id,
+          category: newExpense.category,
+          description: newExpense.description,
+          amount: newExpense.amount,
+          date: newExpense.date,
+          drive_link: driveLink,
+          bill_data: billData,
+        },
+      ]);
+    } catch (e) {
+      console.error('Supabase create expense error:', e);
+    }
+    return newExpense;
+  }
+
+  const data = await apiFetch('/expenses', {
+    method: 'POST',
+    body: JSON.stringify(newExpense),
+  });
+
+  return data || newExpense;
+}
+
+/**
+ * Delete an expense in Supabase
+ */
+export async function deleteExpenseBackend(id) {
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('expenses').delete().eq('id', id);
+    } catch (e) {
+      console.error('Supabase delete expense error:', e);
+    }
+    return;
+  }
+
+  await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+}
+
+/**
  * Register a new tenement & user
  */
 export async function registerTenementBackend(tenementNumber, ownerName, contact, password, maintenanceAmount) {

@@ -9,8 +9,10 @@ import PublishNoticeModal      from '../components/admin/PublishNoticeModal';
 import TenementModal           from '../components/TenementModal';
 import ReceiptModal            from '../components/ReceiptModal';
 import MonthlyGridView         from './MonthlyGridView';
-
-import DeleteTenementModal from '../components/admin/DeleteTenementModal';
+import DrivePreviewModal       from '../components/DrivePreviewModel';
+import DeleteTenementModal     from '../components/admin/DeleteTenementModal';
+import ExpensesTab             from '../components/admin/ExpensesTab';
+import AddExpenseModal         from '../components/admin/AddExpenseModal';
 
 export default function AdminDashboard({ currentTab }) {
   const {
@@ -18,6 +20,8 @@ export default function AdminDashboard({ currentTab }) {
     addNotice, deleteNotice, registerTenement, deleteTenement,
     selectedYear, selectedMonth,
     maintenanceAmount, setMaintenanceAmount,
+    expenses, addExpense, deleteExpense,
+
   } = useContext(AppContext);
 
   // ── Tenement modal ──────────────────────────────────────────────────────────
@@ -42,6 +46,69 @@ export default function AdminDashboard({ currentTab }) {
   const [adminRegError, setAdminRegError]         = useState('');
   const [adminRegSuccess, setAdminRegSuccess]     = useState('');
   const [tenementToDelete, setTenementToDelete]   = useState(null);
+
+  // Expenses Tab State & Form
+  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [expCategory, setExpCategory] = useState('Maintenance');
+  const [expDescription, setExpDescription] = useState('');
+  const [expAmount, setExpAmount] = useState('');
+  const [expDate, setExpDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [expBillData, setExpBillData] = useState(null);
+  const [expFileName, setExpFileName] = useState('');
+  const [uploadingToDrive, setUploadingToDrive] = useState(false);
+  const [expSuccess, setExpSuccess] = useState('');
+  const [expError, setExpError] = useState('');
+
+  // Bill preview modal
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
+
+    const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setExpFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setExpBillData(reader.result); // base64 string
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setExpBillData(null);
+      setExpFileName('');
+    }
+  };
+
+  const handleSaveExpense = (e) => {
+    e.preventDefault();
+    if (!expDescription.trim() || !expAmount || !expDate) {
+      setExpError('All fields (Description, Amount, Date) are required.');
+      return;
+    }
+
+    setUploadingToDrive(true);
+    setExpSuccess('');
+    setExpError('');
+
+    setTimeout(() => {
+      const result = addExpense(expCategory, expDescription, expAmount, expDate, expBillData);
+      setUploadingToDrive(false);
+      if (result.success) {
+        setExpSuccess('✓ Expense recorded and synced to Google Drive successfully!');
+        setExpDescription('');
+        setExpAmount('');
+        setExpFileName('');
+        setExpBillData(null);
+        const fileInput = document.getElementById('expense-file-input');
+        if (fileInput) fileInput.value = '';
+        setTimeout(() => {
+          setExpSuccess('');
+          setIsAddExpenseOpen(false);
+        }, 1500);
+      } else {
+        setExpError('Failed to record expense. Please try again.');
+      }
+    }, 850);
+  };
 
   const handleConfirmDeleteTenement = () => {
     if (tenementToDelete) {
@@ -208,7 +275,7 @@ export default function AdminDashboard({ currentTab }) {
 
   return (
     <>
-      {(activeTab === 'overview' || !['tenements', 'monthly-grid', 'notices'].includes(activeTab)) && (
+      {(activeTab === 'overview' || !['tenements', 'monthly-grid', 'notices', 'expenses'].includes(activeTab)) && (
         <OverviewTab
           selectedMonth={selectedMonth} selectedYear={selectedYear}
           totalTenementsCount={totalTenementsCount}
@@ -261,7 +328,45 @@ export default function AdminDashboard({ currentTab }) {
         />
       )}
 
+      {activeTab === 'expenses' && (
+        <ExpensesTab
+          expenses={expenses}
+          selectedYear={selectedYear}
+          onOpenAddExpense={() => setIsAddExpenseOpen(true)}
+          onViewBill={(exp) => {
+            setSelectedExpense(exp);
+            setIsDriveOpen(true);
+          }}
+          onDeleteExpense={(exp) => {
+            if (window.confirm(`Are you sure you want to delete "${exp.description}"?`)) {
+              deleteExpense(exp.id);
+            }
+          }}
+        />
+      )}
+
+      <DrivePreviewModal
+        isOpen={isDriveOpen}
+        onClose={() => setIsDriveOpen(false)}
+        expense={selectedExpense}
+      />
+
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
+      {isAddExpenseOpen && (
+        <AddExpenseModal
+          expCategory={expCategory} setExpCategory={setExpCategory}
+          expDescription={expDescription} setExpDescription={setExpDescription}
+          expAmount={expAmount} setExpAmount={setExpAmount}
+          expDate={expDate} setExpDate={setExpDate}
+          expFileName={expFileName}
+          uploadingToDrive={uploadingToDrive}
+          expSuccess={expSuccess} expError={expError}
+          handleFileChange={handleFileChange}
+          handleSaveExpense={handleSaveExpense}
+          onClose={() => setIsAddExpenseOpen(false)}
+        />
+      )}
+
       {activeTenement && (
         <TenementModal
           tenement={activeTenement}
@@ -270,6 +375,7 @@ export default function AdminDashboard({ currentTab }) {
           onOpenReceipt={openReceipt}
         />
       )}
+      
 
       {paymentToggleState && (
         <PaymentInstallmentModal

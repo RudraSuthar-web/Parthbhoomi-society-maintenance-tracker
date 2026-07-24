@@ -118,30 +118,14 @@ export default function Login({ navigate }) {
           Parthbhoomi
         </h1>
         <p className="text-sm text-on-surface-variant font-medium mt-2">
-          Co-operative Housing Society · Maintenance Ledger
+          Co-operative Housing Society · Maintenance Tracker
         </p>
       </div>
 
       {/* Card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden">
 
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200">
-          {['signin', 'register'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); clearMessages(); }}
-              className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider text-center transition-all ${
-                activeTab === tab
-                  ? 'bg-white border-b-2 border-primary text-primary'
-                  : 'text-on-surface-variant hover:text-on-surface bg-slate-50 hover:bg-white'
-              }`}
-            >
-              {tab === 'signin' ? 'Sign In' : 'Register'}
-            </button>
-            
-          ))}
-        </div>
+       
 
         <div className="p-6 space-y-5">
           {/* Error / Success alerts */}
@@ -170,7 +154,7 @@ export default function Login({ navigate }) {
                   <input
                     type="text"
                     autoComplete="username"
-                    placeholder="e.g. 42 or ADMIN-01"
+                    placeholder="tenement no."
                     value={username}
                     onChange={(e) => { setUsername(e.target.value); setErrorMsg(''); }}
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-semibold"
@@ -225,7 +209,7 @@ export default function Login({ navigate }) {
             </form>
           )}
 
-          {/* ── REGISTER FORM ── */}
+          {/* ── REGISTER FORM ──
           {activeTab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4 animate-fadeIn" noValidate>
               <div>
@@ -342,7 +326,7 @@ export default function Login({ navigate }) {
                 )}
               </button>
             </form>
-          )}
+          )} */}
 
         
         </div>

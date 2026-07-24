@@ -6,6 +6,8 @@ import LedgerTab    from '../components/resident/LedgerTab';
 import BulletinsTab from '../components/resident/BulletinsTab';
 import ProfileTab   from '../components/resident/ProfileTab';
 import ReceiptModal from '../components/ReceiptModal';
+import DrivePreviewModal from '../components/DrivePreviewModel';
+import ExpensesTab from '../components/resident/ExpensesTab';
 
 import { ALL_MONTHS, getBilledMonths } from '../utils/dateUtils';
 
@@ -13,7 +15,7 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
   const {
     user, tenements, notices, updateProfile,
     selectedYear, selectedMonth,
-    maintenanceAmount,
+    maintenanceAmount, expenses,
   } = useContext(AppContext);
 
   const tenementData = tenements.find(t => t.tenementNumber === user?.username);
@@ -24,6 +26,10 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
   // ── Receipt ─────────────────────────────────────────────────────────────────
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptOpen, setIsReceiptOpen]     = useState(false);
+
+  // Drive Bill Preview State
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
 
   // ── Profile ─────────────────────────────────────────────────────────────────
   const [profileName, setProfileName]       = useState('');
@@ -130,6 +136,17 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
 
       {currentTab === 'notices' && <BulletinsTab notices={notices} />}
 
+      {currentTab === 'expenses' && (
+        <ExpensesTab
+          expenses={expenses}
+          selectedYear={selectedYear}
+          onViewBill={(exp) => {
+            setSelectedExpense(exp);
+            setIsDriveOpen(true);
+          }}
+        />
+      )}
+
       {currentTab === 'profile' && (
         <ProfileTab
           tenementData={tenementData}
@@ -139,6 +156,12 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
           onSave={handleSaveProfile}
         />
       )}
+
+      <DrivePreviewModal
+        isOpen={isDriveOpen}
+        onClose={() => setIsDriveOpen(false)}
+        expense={selectedExpense}
+      />
 
       <ReceiptModal
         isOpen={isReceiptOpen}

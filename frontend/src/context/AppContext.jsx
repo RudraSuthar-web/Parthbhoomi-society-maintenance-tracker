@@ -5,6 +5,7 @@ import {
   getTenements, getNotices, createNotice, deleteNoticeById,
   registerTenementBackend, recordInstallmentBackend,
   revertPaymentBackend, updateProfileBackend, deleteTenementBackend, loginBackend,
+  getExpenses, createExpenseBackend, deleteExpenseBackend,
 } from '../services/apiService';
 
 export const AppContext = createContext();
@@ -361,6 +362,38 @@ export const AppProvider = ({ children }) => {
     deleteTenementBackend(tenementNumber);
   };
 
+  // ── Expenses State (Supabase / Backend) ────────────────────────────────────
+  const [expenses, setExpenses] = useState([]);
+
+  useEffect(() => {
+    getExpenses().then(fetched => {
+      if (fetched && fetched.length > 0) setExpenses(fetched);
+    });
+  }, []);
+
+  // ── Expenses Actions ───────────────────────────────────────────────────────
+  const addExpense = (category, description, amount, date, billData) => {
+    const id = "E" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+    const driveLink = `https://drive.google.com/file/d/gd-${Math.random().toString(36).substr(2, 9)}/view`;
+    const newExpense = {
+      id,
+      category,
+      description: description.trim(),
+      amount: Number(amount),
+      date,
+      driveLink,
+      billData
+    };
+    setExpenses(prev => [newExpense, ...prev]);
+    createExpenseBackend(category, description, amount, date, billData);
+    return { success: true, expense: newExpense };
+  };
+
+  const deleteExpense = (id) => {
+    setExpenses(prev => prev.filter(e => e.id !== id));
+    deleteExpenseBackend(id);
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -385,6 +418,9 @@ export const AppProvider = ({ children }) => {
         togglePaymentStatus,
         addNotice,
         deleteNotice,
+        expenses,
+        addExpense,
+        deleteExpense,
       }}
     >
       {children}

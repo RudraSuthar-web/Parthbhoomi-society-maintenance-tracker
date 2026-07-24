@@ -33,7 +33,6 @@ export default function OverviewTab({
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg flex-shrink-0">
-          <span className="material-symbols-outlined text-primary text-sm">calendar_today</span>
           <span className="text-xs font-bold text-primary">{selectedMonth} {selectedYear}</span>
         </div>
       </div>
@@ -42,9 +41,6 @@ export default function OverviewTab({
       <div className="bg-white border border-black-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-black-50 flex items-center justify-center">
-              <span className="material-symbols-outlined text-black-600 text-[18px]">tune</span>
-            </div>
             <div>
               <h3 className="font-bold text-sm text-on-surface">Maintenance Amount</h3>
               <p className="text-xs text-on-surface-variant">
@@ -87,12 +83,9 @@ export default function OverviewTab({
               <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
                 {selectedMonth} Collection
               </span>
-              <h3 className="text-3xl font-extrabold text-on-surface tracking-tight">
+              <h3 className="text-2xl font-extrabold text-on-surface tracking-tight">
                 ₹{totalCollectedDisplay.toLocaleString('en-IN')}
               </h3>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
             </div>
           </div>
           <div>
@@ -118,12 +111,9 @@ export default function OverviewTab({
               <span className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">
                 Outstanding Dues
               </span>
-              <h3 className="text-3xl font-extrabold text-error tracking-tight">
+              <h3 className="text-2xl font-extrabold text-error tracking-tight">
                 ₹{totalPendingThisMonth.toLocaleString('en-IN')}
               </h3>
-            </div>
-            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
-              <span className="material-symbols-outlined text-error text-[18px]">hourglass_empty</span>
             </div>
           </div>
           <p className="text-sm text-on-surface-variant font-semibold mt-2">
@@ -172,7 +162,7 @@ export default function OverviewTab({
                     aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
                     title={`${t.ownerName} · ${due?.status} · Tap to view`}
                   >
-                    <span className={`text-2xl sm:text-3xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
+                    <span className={`text-xl sm:text-  xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
                       {t.tenementNumber}
                     </span>
                     {isPartial && (
