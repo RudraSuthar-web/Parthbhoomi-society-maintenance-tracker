@@ -61,7 +61,7 @@ export default function TenementsTab({
           }`}
         >
           
-          <div className={`transition-all duration-300 overflow-hidden ${isStuck ? 'max-h-0 opacity-0' : 'max-h-20 opacity-100'}`}>
+          <div className={`transition-all duration-300 overflow-hidden ${isStuck ? 'max-h-0 lg:max-h-20 opacity-0 lg:opacity-100' : 'max-h-20  opacity-100'}`}>
             <h2 className="font-headline-md text-on-surface font-extrabold">Tenement Directory</h2>
             <p className="text-sm lg:text-xs text-on-surface-variant mt-1">
               Tap any unit to view full ledger &amp; manage payments · {selectedMonth} {selectedYear}
