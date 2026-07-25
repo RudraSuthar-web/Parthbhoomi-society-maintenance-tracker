@@ -109,7 +109,7 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="text-right">
               <p className="text-sm font-bold text-on-surface leading-tight max-w-[100px] truncate">
-                {user.name}
+                 {user.name ? user.name.split(' ')[0] : ''}
               </p>
               <p className="text-[12px] text-on-surface-variant truncate leading-none mt-0.5">
                 {isAdmin ? 'Admin' : `Unit ${user.username}`}

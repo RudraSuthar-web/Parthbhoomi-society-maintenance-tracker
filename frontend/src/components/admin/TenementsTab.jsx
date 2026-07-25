@@ -49,7 +49,7 @@ export default function TenementsTab({
 
       <div ref={sentinelRef} className="h-0 w-0" />
       <div
-        className={`sticky top-[85px] md:top-0 z-20 transition-all duration-300 ${
+        className={`sticky top-[57px] md:top-0 z-20 transition-all duration-300 ${
           isStuck
             ? '-mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8'
             : 'mx-0 mt-0'
@@ -61,9 +61,9 @@ export default function TenementsTab({
           }`}
         >
           
-          <div>
-            <h2 className={`font-headline-md text-on-surface font-extrabold ${isStuck ? 'hidden' : ''}`}>Tenement Directory</h2>
-            <p className={`text-sm lg:text-xs text-on-surface-variant mt-1 ${isStuck ? 'hidden' : ''}`}>
+          <div className={`transition-all duration-300 overflow-hidden ${isStuck ? 'max-h-0 opacity-0' : 'max-h-20 opacity-100'}`}>
+            <h2 className="font-headline-md text-on-surface font-extrabold">Tenement Directory</h2>
+            <p className="text-sm lg:text-xs text-on-surface-variant mt-1">
               Tap any unit to view full ledger &amp; manage payments · {selectedMonth} {selectedYear}
             </p>
           </div>
@@ -89,7 +89,13 @@ export default function TenementsTab({
             </div>
             {/* Add unit */}
             <button
-              onClick={() => { setIsAddingTenement(!isAddingTenement); }}
+              onClick={() => {
+                const nextState = !isAddingTenement;
+                setIsAddingTenement(nextState);
+                if (nextState) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
               className="flex items-center gap-1.5 px-1.5 lg:px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary transition-all active-scale"
             >
               <span className="material-symbols-outlined text-sm">{isAddingTenement ? 'close' : 'add'}</span>

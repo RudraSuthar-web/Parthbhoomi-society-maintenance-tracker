@@ -58,7 +58,7 @@ export default function DashboardTab({
         <div className="flex justify-between items-center gap-4">
           <div>
             <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Welcome back</p>
-            <h2 className="font-display-lg text-on-surface mt-0.5">{tenementData.ownerName}</h2>
+            <h2 className="font-display-md text-on-surface mt-0.5">{tenementData.ownerName}</h2>
             <p className="text-sm text-on-surface-variant font-medium mt-0.5">
               Unit {tenementData.tenementNumber} · Parthbhoomi CHS
             </p>
@@ -82,12 +82,14 @@ export default function DashboardTab({
               </p>
             </div>
           </div>
+          <div className='flex justify-end'>
           <button
             onClick={() => onOpenReceipt(currentDue)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white text-emerald-700 border border-slate-300 hover:bg-emerald-50 rounded-md text-md font-bold shadow-sm transition-all active-scale whitespace-nowrap"
+            className=" px-4 py-2 bg-white text-emerald-700 border border-slate-300 hover:bg-emerald-50 rounded-md text-md font-bold shadow-sm transition-all active-scale whitespace-nowrap"
           >
             Receipt
           </button>
+          </div>
         </div>
       ) : isCurrentPartial ? (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-soft animate-fadeIn">

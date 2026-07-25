@@ -26,6 +26,11 @@ function AppContent() {
     }
   }, [user]);
 
+  // Scroll to top on tab switch
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentTab]);
+
   // Central navigation dispatcher to handle routing + subview tabs
   const handleNavigate = (viewName) => {
     const adminTabs    = ['overview', 'tenements', 'notices', 'monthly-grid', 'expenses'];

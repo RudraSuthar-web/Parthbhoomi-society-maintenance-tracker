@@ -29,12 +29,14 @@ export default function GridTable({
           <p className="text-sm font-bold text-slate-700 mt-1">Society Maintenance Ledger · FY {selectedYear}</p>
         </div>
 
+      
+
         <div className="overflow-auto max-h-[580px] sm:max-h-[calc(120vh-260px)] thin-scrollbar print:max-h-none print:overflow-visible relative">
           <table className="border-collapse text-xs w-full min-w-max print:min-w-0 print:text-[10px]">
             <thead>
               <tr className="bg-slate-100 print:bg-slate-100">
                 {/* Unit/Owner col header - sticky top & left */}
-                <th className="sticky top-0 left-0 z-40 print:static print:z-auto bg-slate-100/95 backdrop-blur-sm border-b border-r border-slate-200 px-2 sm:px-4 py-3 text-left w-[80px] sm:w-auto max-w-[80px] sm:max-w-none print:w-auto print:max-w-none shadow-sm">
+                <th className="sticky top-0 left-0 z-40 print:static print:z-auto bg-slate-100 border-b border-r border-slate-200 px-2 sm:px-4 py-3 text-left w-[110px] sm:w-auto max-w-[110px] sm:max-w-none print:w-auto print:max-w-none shadow-[2px_0_5px_rgba(0,0,0,0.06)]">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider overflow-hidden">
                     <span className="material-symbols-outlined text-sm hidden sm:block print:hidden">home</span>
                     <span className="truncate print:whitespace-normal">Unit/Owner</span>
@@ -73,11 +75,11 @@ export default function GridTable({
                 return (
                   <tr
                     key={tenement.tenementNumber}
-                    className={`group transition-colors duration-100 hover:bg-blue-50/40 ${isEven ? 'bg-white' : 'bg-slate-50/40'}`}
+                    className={`group transition-colors duration-100 hover:bg-blue-50/40 ${isEven ? 'bg-white' : 'bg-slate-50/40 backdrop-blur-lg'}`}
                   >
                     {/* Identity cell */}
                     <td
-                      className={`sticky left-0 z-10 print:static print:z-auto border-b border-r border-slate-100 px-2 sm:px-3 py-3 transition-colors duration-100 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none print:max-w-none print:w-auto print:whitespace-nowrap ${isEven ? 'bg-white group-hover:bg-blue-50/40' : 'bg-slate-50/40 group-hover:bg-blue-50/40'}`}
+                      className={`sticky left-0 z-10 print:static print:z-auto border-b border-r border-slate-100 px-2 sm:px-3 py-3 transition-colors duration-100 w-[110px] sm:w-auto max-w-[110px] sm:max-w-none print:max-w-none print:w-auto print:whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.06)] ${isEven ? 'bg-white group-hover:bg-blue-50/40' : 'bg-slate-50/40 group-hover:bg-blue-50/40 backdrop-blur-lg print:bg-transparent print:backdrop-blur-none'}`}
                     >
                       <div className="flex items-center gap-1.5 sm:gap-2.5 print:overflow-visible">
                         <div className="relative rounded-full flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8">
@@ -86,7 +88,7 @@ export default function GridTable({
                           </div>
                         </div>
                         <div className="min-w-0 overflow-hidden print:overflow-visible ">
-                          <p className="font-bold text-on-surface text-[10px] sm:text-xs truncate max-w-[40px] sm:max-w-[120px] print:whitespace-nowrap print:max-w-none print:overflow-visible">
+                          <p className="font-bold text-on-surface text-[10px] sm:text-xs truncate max-w-[70px] sm:max-w-[120px] print:whitespace-nowrap print:max-w-none print:overflow-visible">
                             {tenement.ownerName.split(' ')[0]}
                           </p>
                         </div>
@@ -124,7 +126,7 @@ export default function GridTable({
                             role="button"
                             tabIndex={0}
                             aria-label={`${month} ${selectedYear}: ${due.status} — Unit ${tenement.tenementNumber}`}
-                            className="flex flex-col items-center justify-center gap-0.5 rounded mx-0.5 min-h-[36px] transition-all duration-100"
+                            className="flex flex-col items-center justify-center gap-0.5 rounded mx-0.5 min-h-[42px] transition-all duration-100"
                             onClick={() => onCellClick(tenement.tenementNumber, month, due.status, due)}
                             onKeyDown={e => e.key === 'Enter' && onCellClick(tenement.tenementNumber, month, due.status, due)}
                             onMouseEnter={e => onCellMouseEnter(e, due)}
@@ -174,14 +176,14 @@ export default function GridTable({
 
             {/* Footer totals row - sticky bottom */}
             <tfoot>
-              <tr className="bg-primary/80">
-                <td className="sticky bottom-0 left-0 z-40 bg-primary/40 border-t border-slate-700 px-2 sm:px-4 py-3 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none shadow-md">
+              <tr className="bg-primary">
+                <td className="sticky bottom-0 left-0 z-40 bg-primary border-t border-slate-700 px-2 sm:px-4 py-3 w-[110px] sm:w-auto max-w-[110px] sm:max-w-none shadow-[2px_0_5px_rgba(0,0,0,0.08)]">
                   <div className="flex items-center gap-1.5 text-[9px] sm:text-[13px] font-bold text-white uppercase tracking-wider truncate">
                     Grand Total
                   </div>
                 </td>
                 {monthStats.map(stats => (
-                  <td key={stats.month} className="sticky bottom-0 z-30 bg-primary/40 border-t border-slate-700 px-1 py-3 text-center shadow-md">
+                  <td key={stats.month} className="sticky bottom-0 z-30 bg-primary border-t border-slate-700 px-1 py-3 text-center shadow-md">
                     {stats.collected > 0 && (
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="font-bold text-[13px] text-white">
