@@ -26,7 +26,7 @@ export default function ExpensesTab({
         </div>
         <button
           onClick={onOpenAddExpense}
-          className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary transition-all active-scale self-start sm:self-auto"
         >
           <span className="material-symbols-outlined text-sm">add</span>
           Add Expense
@@ -43,12 +43,12 @@ export default function ExpensesTab({
           <h3 className="text-2xl font-extrabold text-[#191b23]">₹{totalSpent.toLocaleString('en-IN')}</h3>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col justify-between space-y-4">
+        <div className="bg-white   border border-slate-200 rounded-xl shadow-soft p-5 flex flex-col justify-between space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Storage Status</span>
-            <span className="material-symbols-outlined text-blue-700 bg-blue-50 p-2 rounded-full text-base">add_to_drive</span>
+            <span className="material-symbols-outlined text-black bg-blue-50 p-2 rounded-full text-base">add_to_drive</span>
           </div>
-          <h3 className="text-xs font-extrabold text-black/50  flex items-center gap-1">
+          <h3 className="text-xs font-mono items-end  text-black/50  flex  gap-1">
             <span className="material-symbols-outlined text-sm">cloud_done</span> Auto Google Drive Sync Active
           </h3>
         </div>

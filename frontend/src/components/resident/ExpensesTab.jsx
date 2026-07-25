@@ -16,7 +16,7 @@ export default function ExpensesTab({
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-soft">
-        <h2 className="font-display-lg text-on-surface font-extrabold">Society Expenses Tracker</h2>
+        <h2 className="font-headline-md text-on-surface font-extrabold">Society Expenses Tracker</h2>
         <p className="text-xs text-on-surface-variant font-medium mt-0.5">Overview of expenditures for {selectedYear}</p>
       </div>
 
@@ -83,7 +83,7 @@ export default function ExpensesTab({
                         onClick={() => onViewBill(exp)}
                         className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-100 rounded text-[15px] font-bold shadow-soft flex items-center justify-center space-x-1 mx-auto transition-all duration-200 active-scale"
                       >
-                        <span className="material-symbols-outlined text-[14px] text-blue-700 font-bold">
+                        <span className="material-symbols-outlined text-[14px] text-black font-bold">
                           add_to_drive
                         </span>
                         <span>View Bill</span>

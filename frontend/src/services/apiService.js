@@ -75,11 +75,16 @@ export async function saveMaintenanceAmount(amount) {
  * Fetch all tenements with dues and installments
  */
 export async function getTenements() {
+  console.log("getTenements: isSupabaseConfigured =", isSupabaseConfigured);
   if (isSupabaseConfigured) {
     try {
       const { data: tenementsData, error: tErr } = await supabase
         .from('tenements')
         .select('*');
+      if (tErr) {
+        console.error("Supabase tenements query error:", tErr);
+        throw tErr;
+      }
 
       // Fetch all dues in paginated batches (Supabase caps single request at 1000 rows)
       let duesData = [];
@@ -91,7 +96,11 @@ export async function getTenements() {
           .from('dues')
           .select('*')
           .range(from, from + batchSize - 1);
-        if (dErr || !page || page.length === 0) {
+        if (dErr) {
+          console.error("Supabase dues query error:", dErr);
+          throw dErr;
+        }
+        if (!page || page.length === 0) {
           hasMore = false;
         } else {
           duesData = duesData.concat(page);
@@ -109,7 +118,11 @@ export async function getTenements() {
           .from('installments')
           .select('*')
           .range(from, from + batchSize - 1);
-        if (iErr || !page || page.length === 0) {
+        if (iErr) {
+          console.error("Supabase installments query error:", iErr);
+          throw iErr;
+        }
+        if (!page || page.length === 0) {
           hasMore = false;
         } else {
           instData = instData.concat(page);
@@ -118,7 +131,7 @@ export async function getTenements() {
         }
       }
 
-      if (!tErr && tenementsData && duesData) {
+      if (tenementsData && duesData) {
         return tenementsData.map(t => {
           const dues = duesData
             .filter(d => d.tenement_number === t.tenement_number)
@@ -152,8 +165,10 @@ export async function getTenements() {
           };
         });
       }
+      return [];
     } catch (e) {
-      console.warn('Supabase fetch tenements error:', e);
+      console.error('Supabase fetch tenements error:', e);
+      throw e;
     }
   }
 

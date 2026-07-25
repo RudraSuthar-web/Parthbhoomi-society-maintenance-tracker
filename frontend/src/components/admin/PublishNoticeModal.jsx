@@ -25,10 +25,9 @@ export default function PublishNoticeModal({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-headline-md text-on-surface font-extrabold flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">campaign</span>
               Broadcast Notice
             </h2>
-            <p className="text-sm text-on-surface-variant mt-0.5">Draft a society-wide notification</p>
+            <p className="text-sm text-on-surface-variant mt-1 ">Draft a society-wide notification</p>
           </div>
           <button
             onClick={onClose}
@@ -57,7 +56,7 @@ export default function PublishNoticeModal({
               placeholder="e.g. Water Supply Shutdown"
               value={noticeTitle}
               onChange={e => setNoticeTitle(e.target.value)}
-              className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-md font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+              className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-sm font-mono focus:outline-none focus:border-primary focus:bg-white transition-all"
             />
           </div>
           <div>
@@ -69,7 +68,7 @@ export default function PublishNoticeModal({
               placeholder="Write the full announcement…"
               value={noticeContent}
               onChange={e => setNoticeContent(e.target.value)}
-              className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-md font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all resize-none"
+              className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-sm font-mono focus:outline-none focus:border-primary focus:bg-white transition-all resize-none"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 mt-2">
@@ -82,7 +81,7 @@ export default function PublishNoticeModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-soft hover:bg-primary-container flex items-center justify-center gap-1.5 transition-all active-scale"
+              className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-soft hover:bg-primary flex items-center justify-center gap-1.5 transition-all active-scale"
             >
               <span className="material-symbols-outlined text-sm">campaign</span>
               Publish Notice

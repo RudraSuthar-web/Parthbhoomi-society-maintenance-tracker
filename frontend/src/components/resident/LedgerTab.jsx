@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatDate } from '../../utils/dateUtils';
 
 /**
@@ -11,22 +11,57 @@ export default function LedgerTab({
   expandedIdx, setExpandedIdx,
   onOpenReceipt,
 }) {
+  const [isStuck, setIsStuck] = useState(false);
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!sentinelRef.current) return;
+      const rect = sentinelRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 768;
+      const threshold = isMobile ? 58 : 0;
+      setIsStuck(rect.top <= threshold);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-5 animate-fadeIn">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="font-headline-md text-on-surface font-extrabold">Transaction Ledger</h2>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Maintenance record for FY {selectedYear} — Unit {tenementData.tenementNumber}
-          </p>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD Paid ({selectedYear})</p>
-          <p className="text-lg font-extrabold text-primary">₹{yearlyAmountPaid.toLocaleString('en-IN')}</p>
+    <div className="bg-white border border-slate-200 rounded-xl shadow-soft animate-fadeIn">
+      <div ref={sentinelRef} className="h-0 w-0" />
+      <div
+        className={`sticky top-[85px] md:top-0 z-20 transition-all duration-300 ${
+          isStuck
+            ? '-mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8'
+            : 'mx-0 mt-0'
+        }`}
+      >
+        <div
+          className={`bg-white border-b border-slate-200 flex items-start justify-between gap-4  transition-all duration-300 ${
+            isStuck ? 'rounded-none shadow-md p-4 ' : 'rounded-t-xl p-6 '
+          }`}
+        >
+          <div>
+            <h2 className="font-headline-md text-on-surface font-extrabold">Transaction Ledger</h2>
+            <p className="text-xs  font-mono text-on-surface-variant mt-1">
+              Maintenance record for FY {selectedYear} - Unit {tenementData.tenementNumber}
+            </p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD Paid ({selectedYear})</p>
+            <p className="text-lg font-extrabold text-primary">₹{yearlyAmountPaid.toLocaleString('en-IN')}</p>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="">
         {yearDues.map((due, idx) => {
           const isExpanded = expandedIdx === idx;
           const isPaid     = due.status === 'Paid';
@@ -39,7 +74,7 @@ export default function LedgerTab({
           return (
             <div
               key={idx}
-              className={`border rounded-xl overflow-hidden transition-all duration-200 ${isCurrent ? 'ring-1 ring-primary/20' : ''}`}
+              className={`border overflow-hidden transition-all duration-200 ${isCurrent ? 'ring-1 ring-primary/20 z-50' : ''}`}
             >
               {/* Row header */}
               <div
@@ -64,7 +99,7 @@ export default function LedgerTab({
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-bold text-on-surface">{due.month} {selectedYear}</h4>
                       {isCurrent && (
-                        <span className="text-[9px] font-bold text-primary bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full uppercase">Current</span>
+                        <span className="text-[9px] font-bold text-primary bg-primary/5 border border-slate-300 px-1.5 py-0.5 rounded-md uppercase">Current</span>
                       )}
                     </div>
                     <p className="text-[11px] text-on-surface-variant font-semibold">
@@ -78,7 +113,7 @@ export default function LedgerTab({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                  <span className={`text-[12px] font-bold px-2.5 py-1 rounded-md ${
                     isPaid    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     : isPartial ? 'bg-amber-50 text-amber-700 border border-amber-200'
                     : isUnpaid ? 'bg-red-50 text-error border border-red-200'
@@ -107,7 +142,7 @@ export default function LedgerTab({
                             </p>
                             <div className="space-y-1.5">
                               {installments.map((inst, i) => (
-                                <div key={i} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs">
+                                <div key={i} className="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-2 text-xs">
                                   <div className="flex items-center gap-2">
                                     <span className="material-symbols-outlined text-emerald-500 text-sm">verified</span>
                                     <span className="font-semibold text-on-surface">{formatDate(inst.date)}</span>
@@ -127,25 +162,25 @@ export default function LedgerTab({
                           </div>
                         )}
                         {isPaid && (
-                          <button
-                            onClick={e => { e.stopPropagation(); onOpenReceipt(due); }}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale whitespace-nowrap"
-                          >
-                            Download Receipt
-                          </button>
+                          <div className='flex items-end justify-end '>
+                            <button
+                              onClick={e => { e.stopPropagation(); onOpenReceipt(due); }}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-primary/80 text-white text-xs font-bold rounded-md shadow-lg hover:bg-primary transition-all active-scale whitespace-nowrap"
+                            >
+                              Download Receipt
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2 text-xs">
-                      <p className="text-on-surface-variant leading-relaxed">
+                      <p className="text-on-surface-variant font-mono leading-relaxed ">
                         <span className="font-bold text-error">Overdue:</span> Please submit{' '}
                         <span className="font-bold text-on-surface">₹{(due.amount || maintenanceAmount).toLocaleString('en-IN')}</span> to the
-                        society treasurer's desk. Accepted modes: Cheque, Cash, or Bank Transfer (NEFT/UPI on request).
+                        society treasurer's desk. Accepted modes: Cheque, Cash, or Bank Transfer  .
                       </p>
-                      <div className="bg-red-50 border border-red-200 text-error p-2.5 rounded-lg font-semibold">
-                        Payments are offline-verified by the committee.
-                      </div>
+                    
                     </div>
                   )}
                 </div>

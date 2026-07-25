@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AlertBanner from '../ui/AlertBanner';
 import EmptyState from '../ui/EmptyState';
 import { getBilledMonths } from '../../utils/dateUtils';
@@ -22,45 +22,82 @@ export default function TenementsTab({
   onOpenTenement,
   onDeleteTenement,
 }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-5 animate-fadeIn">
+  const [isStuck, setIsStuck] = useState(false);
+  const sentinelRef = useRef(null);
 
-      {/* Header + controls */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <h2 className="font-headline-md text-on-surface font-extrabold">Tenement Directory</h2>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Tap any unit to view full ledger &amp; manage payments · {selectedMonth} {selectedYear}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
-            <input
-              type="text"
-              placeholder="Search unit or owner…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 pr-3 py-1.5 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all w-52"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-              >
-                <span className="material-symbols-outlined text-base">close</span>
-              </button>
-            )}
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!sentinelRef.current) return;
+      const rect = sentinelRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 768;
+      const threshold = isMobile ? 58 : 0;
+      setIsStuck(rect.top <= threshold);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-soft animate-fadeIn">
+
+      <div ref={sentinelRef} className="h-0 w-0" />
+      <div
+        className={`sticky top-[85px] md:top-0 z-20 transition-all duration-300 ${
+          isStuck
+            ? '-mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8'
+            : 'mx-0 mt-0'
+        }`}
+      >
+        <div
+          className={`bg-white border-b border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-all duration-300 ${
+            isStuck ? 'rounded-none shadow-md p-4' : 'rounded-t-xl p-6'
+          }`}
+        >
+          
+          <div>
+            <h2 className={`font-headline-md text-on-surface font-extrabold ${isStuck ? 'hidden' : ''}`}>Tenement Directory</h2>
+            <p className={`text-sm lg:text-xs text-on-surface-variant mt-1 ${isStuck ? 'hidden' : ''}`}>
+              Tap any unit to view full ledger &amp; manage payments · {selectedMonth} {selectedYear}
+            </p>
           </div>
-          {/* Add unit */}
-          <button
-            onClick={() => { setIsAddingTenement(!isAddingTenement); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale"
-          >
-            <span className="material-symbols-outlined text-sm">{isAddingTenement ? 'close' : 'add'}</span>
-            {isAddingTenement ? 'Cancel' : 'Add Unit'}
-          </button>
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-between">
+            {/* Search */}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
+              <input
+                type="text"
+                placeholder="Search unit or owner…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-9  pr-3 py-1.5 border border-slate-200 bg-slate-50 text-on-surface rounded-md text-xs font-mono focus:outline-none focus:border-primary focus:bg-white transition-all w-52"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                >
+                  <span className="material-symbols-outlined text-base">close</span>
+                </button>
+              )}
+            </div>
+            {/* Add unit */}
+            <button
+              onClick={() => { setIsAddingTenement(!isAddingTenement); }}
+              className="flex items-center gap-1.5 px-1.5 lg:px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary transition-all active-scale"
+            >
+              <span className="material-symbols-outlined text-sm">{isAddingTenement ? 'close' : 'add'}</span>
+              <div className="hidden md:block">
+                {isAddingTenement ? 'Cancel' : 'Add Unit'}
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -68,7 +105,7 @@ export default function TenementsTab({
       {isAddingTenement && (
         <form
           onSubmit={onRegisterTenement}
-          className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 animate-fadeIn"
+          className="p-6 bg-slate-50 border border-slate-200  space-y-6 animate-fadeIn"
         >
           <h3 className="font-semibold text-sm text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-lg">add_home</span>
@@ -84,27 +121,27 @@ export default function TenementsTab({
               { label: 'Unit Password',   placeholder: 'Min. 6 characters', value: newPassword,      setter: setNewPassword,        type: 'password' },
             ].map(({ label, placeholder, value, setter, type }) => (
               <div key={label}>
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">{label}</label>
+                <label className="block text-[12px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">{label}</label>
                 <input
                   type={type}
                   placeholder={placeholder}
                   value={value}
                   onChange={e => setter(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+                  className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-mono focus:outline-none focus:border-primary transition-all"
                 />
               </div>
             ))}
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setIsAddingTenement(false)} className="px-4 py-1.5 border border-slate-200 bg-white text-on-surface text-xs font-bold rounded-lg hover:bg-slate-50 transition-all active-scale">Cancel</button>
-            <button type="submit" className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale">Register</button>
+            <button type="button" onClick={() => setIsAddingTenement(false)} className="px-4 py-1.5 border border-slate-200 bg-white text-on-surface text-xs font-bold rounded-md hover:bg-slate-50 transition-all active-scale">Cancel</button>
+            <button type="submit" className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-md shadow-soft hover:bg-primary transition-all active-scale">Register</button>
           </div>
         </form>
       )}
 
       {/* Result count */}
       {searchQuery && (
-        <p className="text-xs text-on-surface-variant">
+        <p className="text-xs text-on-surface-variant p-6">
           Showing <span className="font-bold text-on-surface">{filteredTenements.length}</span> of {tenements.length} tenements
         </p>
       )}
@@ -113,7 +150,7 @@ export default function TenementsTab({
       {filteredTenements.length === 0 ? (
         <EmptyState icon="search_off" message="No tenements match your search." />
       ) : (
-        <div className="space-y-3">
+        <div className="">
           {filteredTenements.map(tenement => {
             const currentDue   = tenement.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
             const billedMonths = getBilledMonths(selectedYear);
@@ -126,7 +163,7 @@ export default function TenementsTab({
             return (
               <div
                 key={tenement.tenementNumber}
-                className="group w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 bg-white border-slate-200 hover:border-slate-300"
+                className="group w-full flex items-center justify-between p-4 border transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 bg-white border-slate-200 hover:border-slate-300"
               >
                 <button
                   onClick={() => onOpenTenement(tenement.tenementNumber)}

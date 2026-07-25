@@ -48,7 +48,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
         </button>
 
         {/* Header */}
-        <div className="bg-primary text-white px-6 pt-8 pb-6 text-center">
+        <div className="bg-primary/90 text-white px-6 pt-8 pb-6 text-center">
           <span className="material-symbols-outlined text-5xl mb-2 print:hidden">verified</span>
           <h2 className="text-xl font-extrabold tracking-tight">
             Parthbhoomi CHS
@@ -127,7 +127,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
             </button>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl shadow-soft hover:bg-primary-container flex items-center gap-1.5 transition-all active-scale focus:outline-none"
+              className="px-4 py-2 bg-primary/80 text-white text-xs font-bold rounded-xl shadow-soft hover:bg-primary flex items-center gap-1.5 transition-all active-scale focus:outline-none"
             >
               <span className="material-symbols-outlined text-sm">print</span>
               Print

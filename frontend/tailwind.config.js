@@ -7,12 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#004ac6",
-        "primary-container": "#2563eb",
+        primary: "#000000",
+        "primary-container": "#1f1f1f",
         surface: "#faf8ff",
-        "surface-container": "#ededf9",
+        "wsurface-container": "#ededf9",
         "surface-container-high": "#e7e7f3",
-        "on-surface": "#191b23",
+          "on-surface": "#191b23",
         "on-surface-variant": "#434655",
         success: "#4CAF50",
         "success-container": "#d3f5d5",

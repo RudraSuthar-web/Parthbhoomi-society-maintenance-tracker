@@ -90,10 +90,10 @@ export default function TenementModal({
             <span className="material-symbols-outlined text-white text-lg">close</span>
           </button>
 
-          <div className="flex items-start gap-4 mr-8 ">
+          <div className="flex items-start gap-4 mr-0 md:mr-8 lg:mr-8 ">
             {/* Unit badge with exact full-size status icon overlay */}
             <div className="relative flex-shrink-0 w-14 h-14">
-              <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-extrabold text-2xl shadow-inner">
+              <div className="w-14 h-14 rounded-xl bg-white/30 border border-white/20 flex items-center justify-center font-extrabold text-2xl shadow-inner">
                 {tenement.tenementNumber}
               </div>
               
@@ -103,9 +103,9 @@ export default function TenementModal({
               <h2 className="text-xl font-extrabold leading-tight truncate">{tenement.ownerName}</h2>
               <a
                 href={`tel:${tenement.contact}`}
-                className="flex items-center gap-1 mt-1 text-xs font-semibold text-blue-200 hover:text-white transition-colors"
+                className="flex items-center gap-1 mt-1 text-xs font-semibold text-white/80 hover:text-white transition-colors"
               >
-                <span className="material-symbols-outlined text-sm">call</span>
+                <span className="material-symbols-outlined text-xs">call</span>
                 {tenement.contact}
               </a>
             </div>
@@ -114,11 +114,10 @@ export default function TenementModal({
             <div className="flex flex-col items-end justify-end ">
               <p className={`text-sm text-right font-extrabold ${isCurrentPaid ? 'text-emerald-300'
                   : isCurrentPartial ? 'text-amber-300'
-                    : 'text-red-300'
+                    : 'text-error'
                 }`}>
                 {isCurrentPaid ? 'Paid' : isCurrentPartial ? 'Partial' : currentDue?.status === 'Unbilled' ? 'Unbilled' : 'Overdue'}
               </p>
-              {/* ✅ Fixed: uses modalMonth and modalYear — not CURRENT_MONTH */}
               <p className="text-[13px] text-right font-bold text-white/60 uppercase tracking-wider">
                 {modalMonth} {modalYear}
               </p>
@@ -142,17 +141,19 @@ export default function TenementModal({
         <div className="flex-1 overflow-y-auto thin-scrollbar">
 
           {/* 12-month payment grid */}
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between mb-3">
+          <div className=" sm:p-0 md:px-3 lg:px-3 md:py-4 lg:py-4">
+            <div className="flex items-center justify-between lg:mb-3 p-4 sm:p-4 md:p-0 lg:p-0">
               
               <div className="flex items-center gap-2">
-                <p className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                Monthly Ledger 
-              </p>
+                <div className="hidden md:block">
+                  <p className="text-xs font-bold text-on-surface uppercase tracking-wider">
+                  Monthly Ledger 
+                  </p>
+                </div>
                 <select
                   value={modalYear}
                   onChange={(e) => setModalYear(Number(e.target.value))}
-                  className="bg-slate/10 border border-black/20 text-black text-[13px] font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer hover:bg-white/20 transition-all appearance-none pr-7"
+                  className="bg-slate/10 border border-black/20 text-black text-[13px] font-bold rounded-md px-3 sm:px-0 md:px-3 lg:px-3 py-1.5 pr-8 sm:pr-8 md:pr-8 lg:pr-8 outline-none cursor-pointer hover:bg-white/20 transition-all appearance-none "
                   style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
                 >
                   {availableYears.map(y => (
@@ -162,10 +163,10 @@ export default function TenementModal({
                   ))}
                 </select>
               </div>
-              <p className="text-[11px] text-on-surface-variant font-semibold">Tap to toggle payment status</p>
+              <p className="text-[13px] font-mono text-on-surface-variant">Tap to toggle payment status</p>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 ">
               {yearDues.map((due) => {
                 const isPaid = due.status === 'Paid';
                 const isPartial = due.status === 'Partial';
@@ -182,13 +183,13 @@ export default function TenementModal({
                       onTogglePayment(tenement.tenementNumber, due.month, due.status, modalYear);
                     }}
                     className={`
-                      cursor-pointer relative rounded-xl border p-3 flex flex-col gap-2
+                      cursor-pointer relative border p-3 flex flex-col gap-2
                       transition-all duration-150
                       ${isPaid ? 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : ''}
                       ${isPartial ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' : ''}
                       ${isUnpaid ? 'bg-red-50 border-red-200 hover:bg-red-100' : ''}
                       ${isUnbilled ? 'bg-slate-50 border-slate-200 opacity-60 hover:bg-slate-100' : ''}
-                      ${isCurrent ? 'ring-2 ring-primary ring-offset-1' : ''}
+                      ${isCurrent ? 'ring-2 ring-primary ring-offset-1 z-10 shadow-lg' : ''}
                     `}
                   >
                     {/* Month name */}
@@ -204,7 +205,7 @@ export default function TenementModal({
                     <div className="flex justify-center pb-0.5">
                       {isPaid && (
                         <div className="flex gap-1 items-center">
-                          <h3 className="text-[13px] text-on-surface-variant">₹{(due.amountPaid || due.amount || maintenanceAmount).toLocaleString('en-IN')}</h3>
+                          <h3 className="text-[15px] text-on-surface-variant">₹{(due.amountPaid || due.amount || maintenanceAmount).toLocaleString('en-IN')}</h3>
                           <span className="material-symbols-outlined text-emerald-500" style={{ fontSize: '15px' }}>verified</span>
                         </div>
                       )}
@@ -248,19 +249,19 @@ export default function TenementModal({
 
         {/* ── Footer ── */}
         <div className="flex-shrink-0 px-5 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
-          <div className="text-xs text-on-surface-variant font-medium space-y-0.5">
+          <div className=" sm:text-sm lg:text-xs text-on-surface-variant font-medium space-y-0.5">
             <div>
-              <span className="font-bold text-[18px] text-on-surface">₹{totalCollected.toLocaleString('en-IN')}</span>
+              <span className="font-bold text-[18px]  text-on-surface">₹{totalCollected.toLocaleString('en-IN')}</span>
               {' '}collected · FY {modalYear}
             </div>
             {partialCount > 0 && (
-              <div className="text-[10px] text-amber-600 font-bold">{partialCount} partial · {unpaidCount} unpaid</div>
+              <div className="text-[15px] lg:text-[12px]  font-mono text-amber-600 font-bold">{partialCount} partial · {unpaidCount} unpaid</div>
             )}
             {partialCount === 0 && unpaidCount > 0 && (
-              <div className="text-[12px] text-error font-bold">{unpaidCount} month{unpaidCount !== 1 ? 's' : ''} unpaid</div>
+              <div className="text-[15px] lg:text-[13px]  font-mono text-error font-bold">{unpaidCount} month{unpaidCount !== 1 ? 's' : ''} unpaid</div>
             )}
             {paidCount === 12 && (
-              <div className="text-[10px] text-emerald-600 font-bold">✓ All {billedMonths} months paid!</div>
+              <div className="sm:text-[14px] lg:text-[12px] text-emerald-600 font-bold">All {billedMonths} months paid!</div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -275,12 +276,14 @@ export default function TenementModal({
                 Delete Unit
               </button>
             )}
+             <div className="hidden md:block">
             <button
               onClick={onClose}
               className="px-5 py-2 bg-white text-slate-800 text-xs font-bold rounded-xl border border-slate-400/30 transition-all active-scale"
             >
               Close
             </button>
+            </div>
           </div>
         </div>
 

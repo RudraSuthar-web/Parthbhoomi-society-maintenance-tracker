@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { CURRENT_YEAR, CURRENT_MONTH, ALL_MONTHS, DUES_AMOUNT } from '../utils/dateUtils';
 import {
   getMaintenanceAmount, saveMaintenanceAmount,
@@ -82,10 +82,14 @@ export const AppProvider = ({ children }) => {
 
   // ── Tenements ──────────────────────────────────────────────────────────────
   const [tenements, setTenements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true);
+    setError(null);
     getTenements().then(fetched => {
-      if (fetched && fetched.length > 0) {
+      if (fetched) {
         setTenements(fetched.map(t => ({
           ...t,
           dues: t.dues.map(d => {
@@ -96,9 +100,22 @@ export const AppProvider = ({ children }) => {
             };
           }),
         })));
+        setError(null);
+      } else {
+        // If fetched is null, treat it as a network/loading error
+        setError('network_error');
       }
+      setLoading(false);
+    }).catch(err => {
+      console.error('Data loading failed:', err);
+      setError('network_error');
+      setLoading(false);
     });
   }, [maintenanceAmount]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
@@ -486,6 +503,9 @@ export const AppProvider = ({ children }) => {
         setGdriveScriptUrl,
         gdriveFolderId,
         setGdriveFolderId,
+        loading,
+        error,
+        retry: loadData,
       }}
     >
       {children}

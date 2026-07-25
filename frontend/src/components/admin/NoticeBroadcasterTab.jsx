@@ -21,12 +21,12 @@ export default function NoticeBroadcasterTab({
           <p className="text-xs text-on-surface-variant mt-0.5">Manage live bulletins broadcasted to residents</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold bg-slate-50 border border-slate-200 text-on-surface-variant px-2.5 py-1 rounded-full">
+          <span className="text-[13px] font-bold bg-slate-50 border border-slate-200 text-on-surface-variant px-2.5 py-2 rounded-md">
             {notices.length} total
           </span>
           <button
             onClick={onOpenPublish}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container transition-all active-scale"
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-md hover:bg-primary transition-all active-scale"
           >
             <span className="material-symbols-outlined text-sm">campaign</span>
             Publish Notice
@@ -46,7 +46,7 @@ export default function NoticeBroadcasterTab({
           >
             <div className="flex gap-3 flex-1 min-w-0">
               <div className="space-y-1 flex-1 min-w-0">
-                <span className="text-[10px] text-on-surface-variant font-bold">{notice.date}</span>
+                <span className="text-[12px] text-on-surface-variant font-bold">{notice.date}</span>
                 <h4 className="font-bold text-md text-on-surface leading-tight group-hover:text-primary transition-colors">{notice.title}</h4>
                 <p className="text-[15px] sm:text-md text-on-surface-variant leading-relaxed font-medium line-clamp-2">{notice.content}</p>
               </div>

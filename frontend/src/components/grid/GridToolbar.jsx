@@ -9,13 +9,13 @@ export default function GridToolbar({ search, setSearch, sortBy, setSortBy }) {
 
       {/* Search */}
       <div className="relative flex-1 max-w-xs">
-        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none">search</span>
+        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-md  pointer-events-none">search</span>
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search.."
-          className="w-full pl-9 pr-3 py-1.5 border border-slate-200 bg-slate-50 text-on-surface text-xs font-semibold rounded-lg focus:outline-none focus:border-primary focus:bg-white transition-all"
+          className="w-full pl-9 pr-3 py-1.5 border border-slate-200 bg-slate-50 text-on-surface text-xs font-mono rounded-md focus:outline-none focus:border-primary focus:bg-white transition-all"
         />
         {search && (
           <button
@@ -29,11 +29,11 @@ export default function GridToolbar({ search, setSearch, sortBy, setSortBy }) {
 
       {/* Sort */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider whitespace-nowrap">Sort</span>
+        <span className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider whitespace-nowrap">Sort</span>
         <select
           value={sortBy}
           onChange={e => setSortBy(e.target.value)}
-          className="border border-slate-200 bg-slate-50 text-on-surface text-xs font-bold rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary transition-all"
+          className="border border-slate-200 bg-slate-50 text-on-surface text-xs font-bold rounded-md px-2 py-1.5 focus:outline-none focus:border-primary transition-all"
         >
           <option value="unit">Unit No.</option>
           <option value="name">Owner Name</option>
@@ -49,19 +49,19 @@ export default function GridToolbar({ search, setSearch, sortBy, setSortBy }) {
       {/* Legend */}
       <div className="flex items-center gap-3 flex-wrap text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-emerald-100 border border-emerald-300 flex-shrink-0" />
+          <span className="w-3.5 h-3.5 rounded-sm bg-emerald-100 border border-emerald-300 flex-shrink-0" />
           <span className="font-semibold text-on-surface-variant">Paid</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-red-100 border border-red-300 flex-shrink-0" />
+          <span className="w-3.5 h-3.5 rounded-sm bg-red-100 border border-red-300 flex-shrink-0" />
           <span className="font-semibold text-on-surface-variant">Unpaid</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-slate-100 border border-slate-200 flex-shrink-0" />
+          <span className="w-3.5 h-3.5 rounded-sm bg-slate-100 border border-slate-200 flex-shrink-0" />
           <span className="font-semibold text-on-surface-variant">Unbilled</span>
         </div>
         <span className="text-slate-300">|</span>
-        <span className="text-[12px] text-on-surface-variant italic">Click any billed cell to toggle status</span>
+        <span className="text-[12px] font-mono text-on-surface-variant">Click any billed cell to toggle status</span>
       </div>
     </div>
   );

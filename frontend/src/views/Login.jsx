@@ -53,7 +53,7 @@ export default function Login({ navigate }) {
       }
     } catch (err) {
       setIsSubmitting(false);
-      setErrorMsg('Login request failed. Please check backend connection.');
+      setErrorMsg(err.message || 'Login request failed. Please check backend connection.');
     }
   };
 
@@ -129,24 +129,13 @@ export default function Login({ navigate }) {
 
         <div className="p-6 space-y-5">
           {/* Error / Success alerts */}
-          {errorMsg && (
-            <div className="bg-red-50 border border-red-200 text-error text-xs font-semibold p-3.5 rounded-xl flex items-start gap-2 animate-fadeIn">
-              <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">error</span>
-              <span>{errorMsg}</span>
-            </div>
-          )}
-          {successMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3.5 rounded-xl flex items-start gap-2 animate-fadeIn">
-              <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">check_circle</span>
-              <span>{successMsg}</span>
-            </div>
-          )}
+    
 
           {/* ── SIGN IN FORM ── */}
           {activeTab === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4 animate-fadeIn" noValidate>
               <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
                   Tenement Number / Admin ID
                 </label>
                 <div className="relative">
@@ -154,16 +143,16 @@ export default function Login({ navigate }) {
                   <input
                     type="text"
                     autoComplete="username"
-                    placeholder="tenement no."
+                    placeholder="Tenement Number / Admin ID "
                     value={username}
                     onChange={(e) => { setUsername(e.target.value); setErrorMsg(''); }}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-semibold"
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
                   Password
                 </label>
                 <div className="relative">
@@ -174,7 +163,7 @@ export default function Login({ navigate }) {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setErrorMsg(''); }}
-                    className="w-full pl-10 pr-10 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-semibold"
+                    className="w-full pl-10 pr-10 py-2.5 border border-slate-200 bg-slate-50 text-on-surface rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-all font-mono"
                   />
                   <button
                     type="button"
@@ -189,10 +178,23 @@ export default function Login({ navigate }) {
                 </div>
               </div>
 
+                    {errorMsg && (
+            <div className=" text-error text-xs font-mono p-2 rounded-xl flex items-start gap-2 animate-fadeIn">
+              <span className="material-symbols-outlined !text-[20px] font-mono flex-shrink-0">error</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+          {successMsg && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold p-3.5 rounded-xl flex items-start gap-2 animate-fadeIn">
+              <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">check_circle</span>
+              <span>{successMsg}</span>
+            </div>
+          )}
+
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-soft hover:bg-primary-container flex items-center justify-center gap-2 transition-all active-scale disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-soft hover:bg-primary flex items-center justify-center gap-2 transition-all active-scale disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 {isSubmitting ? (
                   <>
@@ -311,7 +313,7 @@ export default function Login({ navigate }) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-soft hover:bg-primary-container flex items-center justify-center gap-2 transition-all active-scale disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-soft hover:bg-primary flex items-center justify-center gap-2 transition-all active-scale disabled:opacity-50 disabled:pointer-events-none"
               >
                 {isSubmitting ? (
                   <>

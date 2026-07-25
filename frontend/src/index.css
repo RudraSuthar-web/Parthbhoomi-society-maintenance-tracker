@@ -140,6 +140,60 @@
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
 }
+@keyframes slideInDue {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  20% {
+    transform: translateX(calc(-100% + 10px));
+    opacity: 1;
+  }
+  80% {
+    transform: translateX(calc(-100% + 10px));
+    opacity: 1;
+  }
+  100%{
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes slideInDueRight {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  } 
+  20% {
+    transform: translateX(calc(100% - 10px));
+    opacity: 1;
+  }
+  80% {
+    transform: translateX(calc(100% - 10px));
+    opacity: 1;
+  }
+  100%{
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in-due {
+  animation: slideInDue 5s ease-in-out ;
+}
+
+.animate-slide-in-due-right {
+  animation: slideInDueRight 5s ease-in-out ;
+}   
+
+@keyframes fade{
+  from {opacity: 0;}
+  to {opacity:1;}
+}
+
+.animate-fade {
+  animation: fade 0.3s ease-in-out
+}
 
 /* ─── Print Styles ─────────────────────────────────────── */
 @media print {

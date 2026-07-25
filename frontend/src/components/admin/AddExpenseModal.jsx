@@ -31,7 +31,7 @@ export default function AddExpenseModal({
           
             <div>
               <h2 className="font-headline-md text-on-surface font-extrabold">Record New Expense</h2>
-              <p className="text-xs text-on-surface-variant mt-0.5">Sync bill receipt to society's Google Drive archive</p>
+              <p className="text-xs text-on-surface-variant mt-1">Sync bill receipt to society's Google Drive archive</p>
             </div>
           </div>
           <button
@@ -62,7 +62,7 @@ export default function AddExpenseModal({
         {/* Expense Form */}
         <form onSubmit={handleSaveExpense} className="space-y-4">
           <div>
-            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+            <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
               Category
             </label>
             <select
@@ -79,7 +79,7 @@ export default function AddExpenseModal({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+            <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
               Description
             </label>
             <input
@@ -87,13 +87,13 @@ export default function AddExpenseModal({
               placeholder="e.g. Common Lift Maintenance"
               value={expDescription}
               onChange={(e) => setExpDescription(e.target.value)}
-              className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+              className="w-full px-3.5 py-2 border font-mono border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs  focus:outline-none focus:border-primary focus:bg-white transition-all"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                 Amount (₹)
               </label>
               <input
@@ -101,11 +101,11 @@ export default function AddExpenseModal({
                 placeholder="Amount"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
-                className="w-full px-3.5 py-2 border border-slate-200 bg-slate-50 text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary focus:bg-white transition-all"
+                className="w-full px-3.5 py-2 border border-slate-200 font-mono bg-slate-50 text-on-surface rounded-lg text-xs focus:outline-none focus:border-primary focus:bg-white transition-all"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                 Date
               </label>
               <input
@@ -118,7 +118,7 @@ export default function AddExpenseModal({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+            <label className="block text-[15px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
               Upload Bill / Receipt
             </label>
             <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center bg-slate-50 hover:bg-slate-100/50 hover:border-primary/50 transition-all cursor-pointer relative group">
@@ -132,10 +132,10 @@ export default function AddExpenseModal({
               <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-2xl">
                 cloud_upload
               </span>
-              <p className="text-[10px] text-on-surface-variant font-bold mt-1 group-hover:text-on-surface transition-colors">
+              <p className="text-[15px] text-on-surface-variant font-mono  mt-1 group-hover:text-on-surface transition-colors">
                 {expFileName ? expFileName : 'Choose file or drag & drop'}
               </p>
-              <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+              <p className="text-[12px] text-slate-400 font-medium  font-mono mt-0.5">
                 PDF or Images (will sync to Google Drive)
               </p>
             </div>
@@ -152,7 +152,7 @@ export default function AddExpenseModal({
             <button
               type="submit"
               disabled={uploadingToDrive}
-              className={`px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary-container flex items-center justify-center gap-1.5 transition-all active-scale ${uploadingToDrive ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-soft hover:bg-primary flex items-center justify-center gap-1.5 transition-all active-scale ${uploadingToDrive ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {uploadingToDrive ? (
                 <>

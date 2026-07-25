@@ -57,7 +57,7 @@ export default function GridTable({
                   className="hidden sm:table-cell print:table-cell sticky top-0 right-0 z-40 print:static print:z-auto bg-slate-100/95 backdrop-blur-sm border-b border-l border-slate-200 px-3 py-3 text-center shadow-sm"
                   style={{ minWidth: '80px' }}
                 >
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">YTD {selectedYear}</span>
+                  <span className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">YTD {selectedYear}</span>
                 </th>
               </tr>
             </thead>
@@ -79,13 +79,13 @@ export default function GridTable({
                     <td
                       className={`sticky left-0 z-10 print:static print:z-auto border-b border-r border-slate-100 px-2 sm:px-3 py-3 transition-colors duration-100 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none print:max-w-none print:w-auto print:whitespace-nowrap ${isEven ? 'bg-white group-hover:bg-blue-50/40' : 'bg-slate-50/40 group-hover:bg-blue-50/40'}`}
                     >
-                      <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-hidden print:overflow-visible">
-                        <div className="relative flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8">
+                      <div className="flex items-center gap-1.5 sm:gap-2.5 print:overflow-visible">
+                        <div className="relative rounded-full flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8">
                           <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-[9px] sm:text-xs shadow-lg print:shadow-none">
                             {tenement.tenementNumber}
                           </div>
                         </div>
-                        <div className="min-w-0 overflow-hidden print:overflow-visible">
+                        <div className="min-w-0 overflow-hidden print:overflow-visible ">
                           <p className="font-bold text-on-surface text-[10px] sm:text-xs truncate max-w-[40px] sm:max-w-[120px] print:whitespace-nowrap print:max-w-none print:overflow-visible">
                             {tenement.ownerName.split(' ')[0]}
                           </p>
@@ -112,7 +112,6 @@ export default function GridTable({
 
                       const cellCls = [
                         'border-b border-r px-0.5 py-1 transition-colors duration-100 cursor-pointer',
-                        isCurrent ? 'bg-blue-50/30' : '',
                         isPaid    ? 'border-emerald-100 bg-emerald-50/40 hover:bg-emerald-100'
                         : isPartial ? 'border-amber-100 bg-amber-50 hover:bg-amber-100'
                         : isUnpaid  ? 'border-red-100 bg-red-50 hover:bg-red-100'
@@ -145,8 +144,8 @@ export default function GridTable({
                         <span className={`font-extrabold text-sm leading-tight ${
                           billedMonths === 0 ? 'text-slate-400'
                           : paidCount >= billedMonths ? 'text-emerald-600'
-                          : paidCount >= Math.ceil(billedMonths * 0.75) ? 'text-green-500'
-                          : paidCount >= Math.ceil(billedMonths * 0.5)  ? 'text-black/40'
+                          : paidCount >= Math.ceil(billedMonths * 0.75) ? 'text-emerald-600'
+                          : paidCount >= Math.ceil(billedMonths * 0.5)  ? 'text-primary/70'
                           : 'text-error'
                         }`}>
                           {paidCount}/{billedMonths}
@@ -158,9 +157,9 @@ export default function GridTable({
                           <div
                             className={`h-full rounded-full transition-all duration-700 ${
                               billedMonths === 0 ? 'bg-slate-300'
-                              : paidCount >= billedMonths ? 'bg-emerald-500'
-                              : paidCount >= Math.ceil(billedMonths * 0.75) ? 'bg-green-400'
-                              : paidCount >= Math.ceil(billedMonths * 0.5)  ? 'bg-blue-400'
+                              : paidCount >= billedMonths ? 'bg-emerald-600'
+                              : paidCount >= Math.ceil(billedMonths * 0.75) ? 'bg-green-600'
+                              : paidCount >= Math.ceil(billedMonths * 0.5)  ? 'bg-primary/70'
                               : 'bg-red-400'
                             }`}
                             style={{ width: billedMonths > 0 ? `${(paidCount / billedMonths) * 100}%` : '0%' }}
@@ -175,25 +174,25 @@ export default function GridTable({
 
             {/* Footer totals row - sticky bottom */}
             <tfoot>
-              <tr className="bg-slate-800">
-                <td className="sticky bottom-0 left-0 z-40 bg-slate-800 border-t border-slate-700 px-2 sm:px-4 py-3 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none shadow-md">
-                  <div className="flex items-center gap-1.5 text-[9px] sm:text-[13px] font-bold text-slate-300 uppercase tracking-wider truncate">
+              <tr className="bg-primary/80">
+                <td className="sticky bottom-0 left-0 z-40 bg-primary/40 border-t border-slate-700 px-2 sm:px-4 py-3 w-[80px] sm:w-auto max-w-[80px] sm:max-w-none shadow-md">
+                  <div className="flex items-center gap-1.5 text-[9px] sm:text-[13px] font-bold text-white uppercase tracking-wider truncate">
                     Grand Total
                   </div>
                 </td>
                 {monthStats.map(stats => (
-                  <td key={stats.month} className="sticky bottom-0 z-30 bg-slate-800 border-t border-slate-700 px-1 py-3 text-center shadow-md">
+                  <td key={stats.month} className="sticky bottom-0 z-30 bg-primary/40 border-t border-slate-700 px-1 py-3 text-center shadow-md">
                     {stats.collected > 0 && (
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className="font-extrabold text-[13px] text-white">
+                        <span className="font-bold text-[13px] text-white">
                           ₹{stats.collected.toLocaleString('en-IN')}
                         </span>
                       </div>
                     )}
                   </td>
                 ))}
-                <td className="hidden sm:table-cell print:table-cell sticky bottom-0 right-0 z-40 print:static print:z-auto bg-slate-800 print:bg-slate-200 border-t border-l border-slate-700 print:border-slate-300 px-3 py-3 text-center shadow-md">
-                  <span className="font-extrabold text-sm text-blue-400 print:text-emerald-700">
+                <td className="hidden sm:table-cell print:table-cell sticky bottom-0 right-0 z-40 print:static print:z-auto bg-primary print:bg-slate-200 border-t border-l border-slate-700 print:border-slate-300 px-3 py-3 text-center shadow-md">
+                  <span className="font-extrabold text-sm text-white print:text-emerald-700">
                     ₹{grandCollected.toLocaleString('en-IN')}
                   </span>
                 </td>

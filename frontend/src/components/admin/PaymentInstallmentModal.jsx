@@ -28,9 +28,7 @@ export default function PaymentInstallmentModal({
       >
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-primary text-xl">payments</span>
-          </div>
+         
           <div>
             <h3 className="font-bold text-sm text-on-surface">Add Payment Installment</h3>
             <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
@@ -82,9 +80,9 @@ export default function PaymentInstallmentModal({
         {/* Inputs */}
         <div className="space-y-3">
           <div>
-            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+            <label className="block text-[12px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
               Installment Amount (₹){' '}
-              <span className="text-slate-400 normal-case font-normal">— remaining: ₹{remaining.toLocaleString('en-IN')}</span>
+              <span className="text-slate-400 font-mono normal-case font-normal">- remaining: ₹{remaining.toLocaleString('en-IN')}</span>
             </label>
             <input
               type="number"
@@ -97,7 +95,7 @@ export default function PaymentInstallmentModal({
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+            <label className="block text-[12px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
               Reference / Cheque No.
             </label>
             <input
@@ -105,28 +103,28 @@ export default function PaymentInstallmentModal({
               value={paymentReference}
               onChange={e => setPaymentReference(e.target.value)}
               placeholder="Optional"
-              className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-semibold focus:outline-none focus:border-primary transition-all"
+              className="w-full px-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-xs font-mono focus:outline-none focus:border-primary transition-all"
             />
           </div>
         </div>
 
         {/* Amount validation error */}
         {paymentAmount && Number(paymentAmount) > remaining && (
-          <p className="text-[11px] font-bold text-error bg-red-50 p-2 rounded-lg border border-red-200">
+          <p className="text-[15px] text-error  p-2 ">
             Amount cannot exceed remaining balance of ₹{remaining.toLocaleString('en-IN')}.
           </p>
         )}
 
         {/* Payment method buttons */}
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Select payment mode</p>
+          <p className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Select payment mode</p>
           <div className="grid grid-cols-3 gap-2">
             {['Cheque', 'Cash', 'Bank Transfer'].map(method => (
               <button
                 key={method}
                 onClick={() => onConfirm(method)}
                 disabled={!paymentAmount || Number(paymentAmount) <= 0 || Number(paymentAmount) > remaining}
-                className="py-3 border border-slate-200 bg-slate-50 hover:bg-primary hover:text-white hover:border-primary text-[15px] font-bold text-on-surface rounded-xl transition-all active-scale disabled:opacity-40 disabled:cursor-not-allowed"
+                className="py-2 border border-slate-200 bg-slate-50 hover:bg-primary/80 hover:text-white hover:border-primary text-[15px] font-bold text-on-surface rounded-md transition-all active-scale disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {method}
               </button>

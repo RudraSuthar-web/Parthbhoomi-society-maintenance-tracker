@@ -26,54 +26,17 @@ export default function OverviewTab({
       {/* Page header */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6 flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-display-lg text-on-surface">Society Overview</h2>
+          <h2 className=" text-lg font-bold text-on-surface">Society Overview</h2>
           <p className="text-xs text-on-surface-variant mt-1">
-            Maintenance fund summary for{' '}
-            <span className="font-bold text-on-surface">{selectedMonth} {selectedYear}</span>
+            Maintenance fund summary
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg flex-shrink-0">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-black/5 border border-black/20 rounded-md shadow-md flex-shrink-0">
           <span className="text-xs font-bold text-primary">{selectedMonth} {selectedYear}</span>
         </div>
       </div>
 
-      {/* Maintenance Amount setting */}
-      <div className="bg-white border border-black-200 rounded-xl shadow-soft p-5 sm:p-6 space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2.5">
-            <div>
-              <h3 className="font-bold text-sm text-on-surface">Maintenance Amount</h3>
-              <p className="text-xs text-on-surface-variant">
-                Currently{' '}
-                <span className="font-bold text-blue-700 text-[18px]">₹{maintenanceAmount.toLocaleString('en-IN')}</span>
-                {' '}/ month
-              </p>
-            </div>
-          </div>
-          <form onSubmit={onSaveSettings} className="flex items-center gap-2">
-            <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">₹</span>
-              <input
-                type="number"
-                value={settingsAmount}
-                onChange={e => setSettingsAmount(e.target.value)}
-                className="pl-6 pr-3 py-2 border border-slate-200 bg-white text-on-surface rounded-lg text-sm font-semibold focus:outline-none focus:border-black-400 transition-all w-28"
-                min="1"
-                placeholder="500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 border border-2 text-xs font-bold rounded-lg bg-blue-700 text-white transition-all active-scale"
-            >
-              Update
-            </button>
-          </form>
-        </div>
-        <AlertBanner type="success" message={settingsSuccess} />
-        <AlertBanner type="error"   message={settingsError} />
-      </div>
-
+     
       {/* KPI row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Collected */}
@@ -93,12 +56,12 @@ export default function OverviewTab({
               <span className="text-xs text-on-surface-variant font-semibold">
                 {currentMonthPaid.length}/{totalTenementsCount} fully paid
               </span>
-              <span className="text-xs font-bold text-emerald-600">{collectionRate}%</span>
+              <span className="text-xs font-bold text-emerald-800">{collectionRate}%</span>
             </div>
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                style={{ width: `${collectionRate}%` }}
+                className="h-full  bg-gradient-to-r from-black to-emerald-500 rounded-full transition-all duration-700 ease-out origin-left"
+                style={ { transform: `scaleX(${collectionRate / 100})` } } 
               />
             </div>
           </div>
@@ -133,7 +96,7 @@ export default function OverviewTab({
       {totalTenementsCount > 0 && (
       <div className="bg-white border border-slate-200 rounded-xl shadow-soft">
         {currentMonthPaid.length === totalTenementsCount ? (
-          <div className="flex items-center bg-emerald-500 rounded-xl p-3 justify-between">
+          <div className="flex items-center bg-emerald-800 rounded-xl p-3 justify-between">
             <div className="flex gap-2 items-center">
               <span className="material-symbols-outlined text-white">verified</span>
               <h3 className="font-title-lg font-bold text-white">All {totalTenementsCount} tenements have paid</h3>
@@ -141,7 +104,7 @@ export default function OverviewTab({
             <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
           </div>
         ) : defaulterTenements.length === 0 ? (
-          <div className="flex items-center bg-slate-500 rounded-xl p-3 justify-between">
+          <div className="flex items-center bg-primary/80 rounded-xl p-3 justify-between">
             <div className="flex gap-2 items-center">
               <h3 className="font-title-lg font-bold text-white">Billing has not started for {selectedMonth} {selectedYear}</h3>
             </div>
@@ -149,13 +112,13 @@ export default function OverviewTab({
           </div>
         ) : (
           <>
-            <div className="flex items-center bg-error rounded-t-xl p-3 justify-between">
+            <div className="flex items-center  bg-gradient-to-tl from-red-900 to-error rounded-t-xl p-3 justify-between">
               <h3 className="font-title-lg font-bold text-white">
                 <span className="font-bold text-white text-[20px]">{defaulterTenements.length}</span> Unpaid
               </h3>
               <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-12 gap-3 p-6">
+            <div className="grid grid-cols-5 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-12">
               {defaulterTenements.map(t => {
                 const due = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
                 const isPartial = due?.status === 'Partial';
@@ -165,25 +128,24 @@ export default function OverviewTab({
                     onClick={() => onOpenTenement(t.tenementNumber)}
                     className={`
                       group relative aspect-square flex flex-col items-center justify-center
-                      border-2 rounded-2xl active:scale-95 transition-all duration-150
+                      border  active:scale-95 transition-all duration-150
                       cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2
                       ${isPartial
                         ? 'bg-amber-50 border-amber-300 hover:bg-amber-100 hover:border-amber-500 focus:ring-amber-400'
-                        : 'bg-red-50 border-red-200 hover:bg-red-100 hover:border-error hover:shadow-lg hover:shadow-red-100 focus:ring-error'
+                        : 'bg-white border-red-200 hover:bg-red-100 hover:border-error hover:shadow-lg hover:shadow-red-100 focus:ring-error'
                       }
                     `}
                     aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
-                    title={`${t.ownerName} · ${due?.status} · Tap to view`}
                   >
-                    <span className={`text-xl sm:text-xl font-extrabold leading-none ${isPartial ? 'text-amber-700' : 'text-error'}`}>
+                    <span className={`text-xl sm:text-xl font-extrabold leading-none group-hover:translate-y-[-12px] transition-transform duration-150 ${isPartial ? 'text-amber-700' : 'text-error'}`}>
                       {t.tenementNumber}
                     </span>
                     {isPartial && (
                       <span className="text-[8px] font-bold text-amber-600 uppercase">Partial</span>
                     )}
                     <span className="
-                      absolute bottom-0 left-0 right-0 bg-black/50 text-white
-                      text-[15px] font-bold text-center py-1 rounded-b-xl
+                      absolute bottom-0 left-0 right-0 bg-black/50 text-white 
+                      text-[15px] font-bold text-center py-1
                       opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate px-1
                     ">
                       {t.ownerName.split(' ')[0]}
@@ -200,7 +162,7 @@ export default function OverviewTab({
       <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-title-lg font-bold text-on-surface">Active Bulletin Board</h3>
-          <span className="text-[12px] font-bold text-on-surface-variant bg-slate-50 border border-slate-200 rounded-full px-2.5 py-0.5">
+          <span className="text-[12px] font-bold text-on-surface-variant bg-primary/5 border border-slate-300 rounded-md px-2.5 py-0.5">
             {notices.length} notice{notices.length !== 1 ? 's' : ''}
           </span>
         </div>

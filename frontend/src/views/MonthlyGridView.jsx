@@ -143,7 +143,7 @@ export default function MonthlyGridView() {
               <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
                 Monthly Collection Register
               </span>
-              <h2 className="font-display-lg text-on-surface">
+              <h2 className="font-display-lg text-on-surface ">
                 Payment Matrix <span className="text-primary">{selectedYear}</span>
               </h2>
               <p className="text-xs text-on-surface-variant mt-1">
@@ -153,7 +153,7 @@ export default function MonthlyGridView() {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-all duration-150 active-scale focus:outline-none focus:ring-2 focus:ring-slate-500"
+                className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white text-xs font-bold rounded-lg  shadow-lg transition-all duration-150 active-scale focus:outline-none focus:ring-2 focus:ring-slate-500"
               >
                 Print Register
               </button>
@@ -164,20 +164,19 @@ export default function MonthlyGridView() {
         {/* KPI strip */}
         <div className="grid grid-cols-2 xl:grid-cols-4 print:grid-cols-4 gap-3 sm:gap-4 print:mb-6">
           {[
-            { label: `YTD Collected (${selectedYear})`, value: `₹${(grandCollected / 1000).toFixed(1)}k`, sub: `${grandPaidSlots} fully paid slots`, icon: 'payments', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', valueColor: 'text-emerald-700' },
+            { label: `YTD Collected (${selectedYear})`, value: `₹${(grandCollected / 1000).toFixed(1)}k`, sub: `${grandPaidSlots} fully paid slots`, icon: 'payments', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700', valueColor: 'text-emerald-700' },
             { label: 'Outstanding Amount', value: `₹${(grandPendingAmt / 1000).toFixed(1)}k`, sub: `${monthStats.reduce((s, m) => s + m.unpaid + m.partial, 0)} unpaid/partial slots`, icon: 'hourglass_empty', iconBg: 'bg-red-50', iconColor: 'text-error', valueColor: 'text-error' },
             { label: 'Collection Rate', value: `${overallRate}%`, sub: `${grandPaidSlots} of ${tenements.length * 12} slots paid`, icon: 'trending_up', iconBg: 'bg-blue-50', iconColor: 'text-primary', valueColor: 'text-primary' },
             { label: 'Total Tenements', value: tenements.length, sub: `Maintenance: ₹${maintenanceAmount.toLocaleString('en-IN')}/mo`, icon: 'home_work', iconBg: 'bg-slate-50', iconColor: 'text-slate-600', valueColor: 'text-on-surface' },
           ].map(kpi => (
-            <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-soft flex items-start gap-3">
-              <div className={`w-9 h-9 rounded-lg ${kpi.iconBg} flex items-center justify-center flex-shrink-0`}>
-                <span className={`material-symbols-outlined text-[18px] ${kpi.iconColor}`}>{kpi.icon}</span>
-              </div>
+            <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-soft flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider leading-none">{kpi.label}</p>
-                <p className={`font-extrabold text-xl mt-1 leading-tight ${kpi.valueColor}`}>{kpi.value}</p>
-                <p className="text-[10px] text-on-surface-variant font-medium mt-0.5 truncate">{kpi.sub}</p>
+                <p className={`font-extrabold text-lg mt-1 leading-tight ${kpi.valueColor}`}>{kpi.value}</p>
+                <p className="text-[12px] text-on-surface-variant font-medium mt-0.5 truncate">{kpi.sub}</p>
               </div>
+              <span className={`material-symbols-outlined text-[18px] ${kpi.iconColor}`}>{kpi.icon}</span>
+            
             </div>
           ))}
         </div>
