@@ -140,8 +140,8 @@ export default function DashboardTab({
             <div
               className={`bg-white border transition-all duration-300 ease-in-out flex justify-between sm:items-center gap-4 ${
                 isStuck
-                  ? 'border-b border-x-0 border-t-0 border-error rounded-none shadow-md p-4 flex-row sm:flex-col'
-                  : 'border-error rounded-xl p-5 shadow-soft flex-col'
+                  ? 'border-b border-x-0 border-t-0 border-error rounded-none shadow-md p-4 flex-row sm:flex-col lg:flex-row'
+                  : 'border-error rounded-xl p-5 shadow-soft flex-col lg:flex-row'
               }`}
             >
               <div className="flex items-start gap-3">
@@ -157,7 +157,7 @@ export default function DashboardTab({
               <code key="due-badge" className="absolute left-0 top-0 bottom-0 z-0 flex px-4 items-center bg-error/30 border border-error text-error font-extrabold text-[16px] rounded-l-md shadow-inner text-center whitespace-nowrap transition-transform duration-500 ease-out animate-slide-in-due ">
               Due
               </code>
-              <div className="px-4 py-2 bg-white border cursor-pointer border-red-300 text-error font-extrabold text-md rounded-md shadow-lg text-center whitespace-nowrap relative z-10">
+              <div className="px-4 py-2 bg-white border border-red-300 text-error font-extrabold text-md rounded-md shadow-lg text-center whitespace-nowrap relative z-10">
                 ₹{(currentDue?.amount ?? maintenanceAmount).toLocaleString('en-IN')}/-
               </div>
               </div>

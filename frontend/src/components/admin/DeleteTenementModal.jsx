@@ -20,25 +20,27 @@ export default function DeleteTenementModal({
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-red-100 text-error flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-2xl">delete_forever</span>
-          </div>
+         
           <div>
             <h3 className="font-headline-md text-on-surface font-extrabold leading-tight">
               Delete Tenement Unit {tenement.tenementNumber}?
             </h3>
-            <p className="text-xs text-on-surface-variant font-semibold mt-0.5">
+            <p className="text-sm text-on-surface-variant font-semibold tracking-wider mt-1">
               {tenement.ownerName}
             </p>
           </div>
         </div>
 
-        <div className="p-3.5 bg-red-50 border border-red-200 text-error rounded-xl text-sm space-y-1">
+        <div className="p-3.5 bg-red-50 border font-mono border-red-200 text-error rounded-xl text-sm space-y-1">
           <p className="font-bold flex items-center gap-1.5">
             Permanent Action Warning
           </p>
           <p className="text-[15px] text-black leading-relaxed font-medium">
-            This will permanently remove <span className="font-bold text-[18px] text-error ">Unit {tenement.tenementNumber} ({tenement.ownerName})</span> ,<br></br> all its 12-month maintenance dues, payment installments, and resident login account from the database.
+            This will permanently remove 
+          </p>
+          <div className="flex font-bold bg-zinc-100 p-1  justify-center rounded-md border border-zinc-800 text-[18px] text-error mt-3 mb-3">Unit {tenement.tenementNumber} ({tenement.ownerName})</div>
+          <p className="text-[15px] text-black leading-relaxed font-medium">
+            all its 12-month maintenance dues, payment installments, and resident login account from the database.
           </p>
         </div>
 
@@ -55,7 +57,6 @@ export default function DeleteTenementModal({
             onClick={onConfirm}
             className="px-4 py-2 bg-error text-white text-xs font-bold rounded-xl shadow-soft hover:bg-red-700 transition-all active-scale flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-sm">delete</span>
             Delete Tenement
           </button>
         </div>

@@ -194,7 +194,7 @@ export default function TenementsTab({
                       <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">Year {selectedYear}</span>
                       <span className={`text-xs font-bold ${allPaid ? 'text-emerald-600' : 'text-slate-600'}`}>{paidCount}/{billedMonths} paid</span>
                       {unpaidCount > 0 && (
-                        <span className="text-[13px] font-bold text-error block">{unpaidCount} overdue</span>
+                        <span className="text-[13px] font-mono font-bold text-error block">{unpaidCount} overdue</span>
                       )}
                     </div>
                     <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors duration-150">

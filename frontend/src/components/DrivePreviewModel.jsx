@@ -51,11 +51,7 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
           </tbody>
         </table>
 
-        {/* Watermark Stamp */}
-        <div className="border border-dashed border-success rounded p-2 text-center text-success uppercase tracking-widest font-extrabold text-[10px] transform -rotate-3 my-2 bg-success bg-opacity-5">
-          ✓ Google Drive Stored
-        </div>
-
+     
         <p className="text-[9px] text-on-surface-variant text-center mt-4 leading-relaxed border-t border-[#E2E8F0] pt-2">
           This bill has been archived to the Society's Google Drive at {driveLink.substring(0, 30)}...
         </p>
@@ -87,22 +83,7 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
 
           {/* Action buttons */}
           <div className="flex items-center space-x-3">
-            <a
-              href={driveLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 hover:bg-[#3d3d3d] rounded-full transition-all active-scale text-gray-300 hover:text-white flex items-center justify-center"
-              title="Open in Google Drive"
-            >
-              <span className="material-symbols-outlined text-lg">open_in_new</span>
-            </a>
-            <button
-              onClick={() => window.print()}
-              className="p-1.5 hover:bg-[#3d3d3d] rounded-full transition-all active-scale text-gray-300 hover:text-white flex items-center justify-center"
-              title="Print"
-            >
-              <span className="material-symbols-outlined text-lg">print</span>
-            </button>
+            
             <button
               onClick={onClose}
               className="p-1.5 hover:bg-[#3d3d3d] rounded-full transition-all active-scale text-gray-300 hover:text-white flex items-center justify-center"
@@ -133,7 +114,7 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
         </div>
 
         {/* Footer info bar */}
-        <div className="bg-[#2d2d2d] px-4 py-2 border-t border-[#3d3d3d] flex flex-col sm:flex-row sm:justify-between text-[11px] text-gray-400 gap-1.5">
+        <div className="bg-[#2d2d2d] px-4 py-2 border-t border-[#3d3d3d] flex flex-col sm:flex-row sm:justify-between text-[15px] text-gray-400 gap-1.5">
           <span>Date Cleared: <strong>{date}</strong></span>
           <span>Category: <strong>{category}</strong></span>
           <span>Amount: <strong className="text-white">₹{amount.toLocaleString('en-IN')}</strong></span>

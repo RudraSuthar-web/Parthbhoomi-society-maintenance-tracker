@@ -76,11 +76,11 @@ export default function ExpensesTab({
                   <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 pr-2 font-medium">{exp.date}</td>
                     <td className="py-3 pr-2">
-                      <span className="bg-slate-100 text-on-surface px-2 py-0.5 rounded-full border border-slate-200 uppercase text-[9px] font-bold">
+                      <span className="bg-slate-100 text-on-surface px-2 py-0.5 rounded-sm border border-slate-200 font-medium uppercase text-[15px] font-mono">
                         {exp.category}
                       </span>
                     </td>
-                    <td className="py-3 pr-2 font-bold text-on-surface">{exp.description}</td>
+                    <td className="py-3 pr-2 font-medium text-on-surface tracking-wider">{exp.description}</td>
                     <td className="py-3 pr-2 text-right font-bold text-on-surface">₹{exp.amount.toLocaleString('en-IN')}</td>
                     <td className="py-3 text-center flex items-center justify-center gap-2">
                       <button
@@ -88,7 +88,6 @@ export default function ExpensesTab({
                         className="px-2 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-[10px] font-bold shadow-soft flex items-center justify-center gap-1 transition-all active-scale"
                       >
                         <span className="material-symbols-outlined text-[13px] text-amber-500 font-bold">add_to_drive</span>
-                        <span>View Bill</span>
                       </button>
                       <button
                         onClick={() => onDeleteExpense(exp)}

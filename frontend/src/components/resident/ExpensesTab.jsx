@@ -81,12 +81,12 @@ export default function ExpensesTab({
                     <td className="py-3.5 text-center">
                       <button
                         onClick={() => onViewBill(exp)}
-                        className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-100 rounded text-[15px] font-bold shadow-soft flex items-center justify-center space-x-1 mx-auto transition-all duration-200 active-scale"
+                        className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-100 rounded-sm text-[15px] font-bold shadow-soft flex items-center justify-center space-x-1 mx-auto transition-all duration-200 active-scale"
                       >
                         <span className="material-symbols-outlined text-[14px] text-black font-bold">
                           add_to_drive
                         </span>
-                        <span>View Bill</span>
+                        
                       </button>
                     </td>
                   </tr>
