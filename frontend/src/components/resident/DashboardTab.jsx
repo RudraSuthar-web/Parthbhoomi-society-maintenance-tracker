@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getBilledMonths, formatDate, monthIndex } from '../../utils/dateUtils';
+import { getBilledMonths, formatDate, monthIndex, CURRENT_YEAR } from '../../utils/dateUtils';
 
 /**
  * DashboardTab — Resident "My Dashboard" tab.
@@ -205,7 +205,7 @@ export default function DashboardTab({
                 title={`${due.month}: ${due.status}${due.status === 'Partial' ? ` (₹${due.amountPaid}/${maintenanceAmount})` : ''}`}
                 className={`flex-1 h-full rounded-sm transition-all duration-500 hover:scale-y-125 hover:shadow-md cursor-pointer ${
                   animate ? colorClass : 'bg-slate-200'
-                } ${due.month === selectedMonth ? 'ring-2 ring-primary ring-offset-1 z-10' : ''}`}
+                } ${due.month === selectedMonth && due.year === CURRENT_YEAR ? 'ring-2 ring-primary ring-offset-1 z-10' : ''}`}
                 style={{
                   transitionDelay: animate ? `${idx * 75}ms` : '0ms',
                 }}
@@ -257,7 +257,7 @@ export default function DashboardTab({
                 <div className="flex items-center gap-2.5">
                   
                   <div>
-                    <p className="text-sm font-bold text-on-surface">{due.month} {selectedYear}</p>
+                    <p className="text-sm font-bold text-on-surface">{due.month} {due.year}</p>
                     <p className="text-[15px] text-on-surface-variant font-semibold">
                       {due.status === 'Partial'
                         ? `₹${(due.amountPaid || 0).toLocaleString('en-IN')} / ₹${maintenanceAmount.toLocaleString('en-IN')}`

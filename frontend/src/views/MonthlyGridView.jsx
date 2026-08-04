@@ -162,14 +162,14 @@ export default function MonthlyGridView() {
         </div>
 
         {/* KPI strip */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 print:grid-cols-4 gap-3 sm:gap-4 print:mb-6">
+        <div className="grid grid-cols-2 xl:grid-cols-4 print:grid-cols-4 print:mb-6  rounded-xl ">
           {[
             { label: `YTD Collected (${selectedYear})`, value: `₹${(grandCollected / 1000).toFixed(1)}k`, sub: `${grandPaidSlots} fully paid slots`, icon: 'payments', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700', valueColor: 'text-emerald-700' },
             { label: 'Outstanding Amount', value: `₹${(grandPendingAmt / 1000).toFixed(1)}k`, sub: `${monthStats.reduce((s, m) => s + m.unpaid + m.partial, 0)} unpaid/partial slots`, icon: 'hourglass_empty', iconBg: 'bg-red-50', iconColor: 'text-error', valueColor: 'text-error' },
             { label: 'Collection Rate', value: `${overallRate}%`, sub: `${grandPaidSlots} of ${tenements.length * 12} slots paid`, icon: 'trending_up', iconBg: 'bg-blue-50', iconColor: 'text-primary', valueColor: 'text-primary' },
             { label: 'Total Tenements', value: tenements.length, sub: `Maintenance: ₹${maintenanceAmount.toLocaleString('en-IN')}/mo`, icon: 'home_work', iconBg: 'bg-slate-50', iconColor: 'text-slate-600', valueColor: 'text-on-surface' },
           ].map(kpi => (
-            <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-soft flex items-start justify-between gap-3">
+            <div key={kpi.label} className="bg-white border border-slate-200 p-4 shadow-soft flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider leading-none">{kpi.label}</p>
                 <p className={`font-extrabold text-lg mt-1 leading-tight ${kpi.valueColor}`}>{kpi.value}</p>

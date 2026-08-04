@@ -25,6 +25,7 @@ export function computeDueStatus(due, maintenanceAmount) {
   const isFuture = (due.year > cy) || (due.year === cy && mIdx > cmIdx);
   if (isFuture) return 'Unbilled';
 
+  if (due.status === 'Unbilled') return 'Unpaid';
   return due.status || 'Unpaid';
 }
 
