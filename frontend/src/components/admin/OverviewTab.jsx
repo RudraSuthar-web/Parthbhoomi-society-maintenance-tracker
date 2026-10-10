@@ -19,6 +19,8 @@ export default function OverviewTab({
   settingsSuccess, settingsError,
   onSaveSettings,
   onOpenTenement,
+  onPrevMonth,
+  onNextMonth,
 }) {
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -101,14 +103,22 @@ export default function OverviewTab({
               <span className="material-symbols-outlined text-white">verified</span>
               <h3 className="font-title-lg font-bold text-white">All {totalTenementsCount} tenements have paid</h3>
             </div>
-            <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button onClick={onPrevMonth} className="material-symbols-outlined text-white hover:bg-white/20 rounded-full p-0.5 sm:p-1 transition-colors select-none focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 text-lg sm:text-2xl">chevron_left</button>
+              <h3 className="font-title-lg font-bold text-white min-w-[100px] sm:min-w-[140px] text-center text-sm sm:text-base">{selectedMonth} - {selectedYear}</h3>
+              <button onClick={onNextMonth} className="material-symbols-outlined text-white hover:bg-white/20 rounded-full p-0.5 sm:p-1 transition-colors select-none focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 text-lg sm:text-2xl">chevron_right</button>
+            </div>
           </div>
         ) : defaulterTenements.length === 0 ? (
           <div className="flex items-center bg-primary/80 rounded-xl p-3 justify-between">
             <div className="flex gap-2 items-center">
               <h3 className="font-title-lg font-bold text-white">Billing has not started for {selectedMonth} {selectedYear}</h3>
             </div>
-            <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button onClick={onPrevMonth} className="material-symbols-outlined text-white hover:bg-white/20 rounded-full p-0.5 sm:p-1 transition-colors select-none focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 text-lg sm:text-2xl">chevron_left</button>
+              <h3 className="font-title-lg font-bold text-white min-w-[100px] sm:min-w-[140px] text-center text-sm sm:text-base">{selectedMonth} - {selectedYear}</h3>
+              <button onClick={onNextMonth} className="material-symbols-outlined text-white hover:bg-white/20 rounded-full p-0.5 sm:p-1 transition-colors select-none focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 text-lg sm:text-2xl">chevron_right</button>
+            </div>
           </div>
         ) : (
           <>
@@ -116,7 +126,11 @@ export default function OverviewTab({
               <h3 className="font-title-lg font-bold text-white">
                 <span className="font-bold text-white text-[20px]">{defaulterTenements.length}</span> Unpaid
               </h3>
-              <h3 className="font-title-lg font-bold text-white">{selectedMonth} - {selectedYear}</h3>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <button onClick={onPrevMonth} className="material-symbols-outlined text-white hover:bg-white/20 rounded-full p-0.5 sm:p-1 transition-colors select-none focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 text-lg sm:text-2xl">chevron_left</button>
+                <h3 className="font-title-lg font-bold text-white min-w-[100px] sm:min-w-[140px] text-center text-sm sm:text-base">{selectedMonth} - {selectedYear}</h3>
+                <button onClick={onNextMonth} className="material-symbols-outlined text-white hover:bg-white/20 rounded-full p-0.5 sm:p-1 transition-colors select-none focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 text-lg sm:text-2xl">chevron_right</button>
+              </div>
             </div>
             <div className="grid grid-cols-5 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-12">
               {defaulterTenements.map(t => {

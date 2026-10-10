@@ -155,13 +155,17 @@ export default function Layout({ children, currentTab, setCurrentTab }) {
               >
                 {item.icon}
               </span>
-              <span className="text-[12px] font-bold mt-0.5 truncate max-w-full">
+              <span className="text-[10px] sm:text-[12px] font-bold mt-1 truncate max-w-full tracking-tight">
                 {item.name
                   .replace('My ', '')
                   .replace(' Broadcaster', '')
                   .replace('Society ', '')
                   .replace(' Ledger', '')
-                  .replace('Global ', '')}
+                  .replace('Global ', '')
+                  .replace('All ', '')
+                  .replace('Monthly ', '')
+                  .replace(' Tracker', '')
+                  .replace(' Tracker', 's')}
               </span>
             </button>
           );

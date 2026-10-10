@@ -1,5 +1,6 @@
 import React, { useContext, useState, useCallback, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
+import { ALL_MONTHS } from '../utils/dateUtils';
 
 import OverviewTab            from '../components/admin/OverviewTab';
 import TenementsTab           from '../components/admin/TenementsTab';
@@ -18,7 +19,7 @@ export default function AdminDashboard({ currentTab }) {
   const {
     tenements, notices, addInstallment, revertPayment,
     addNotice, deleteNotice, registerTenement, deleteTenement,
-    selectedYear, selectedMonth,
+    selectedYear, selectedMonth, setSelectedYear, setSelectedMonth,
     maintenanceAmount, setMaintenanceAmount,
     expenses, addExpense, deleteExpense,
     loading, error, retry,
@@ -186,6 +187,26 @@ export default function AdminDashboard({ currentTab }) {
     });
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  const handlePrevMonth = () => {
+    const currentIndex = ALL_MONTHS.indexOf(selectedMonth);
+    if (currentIndex === 0) {
+      setSelectedMonth(ALL_MONTHS[11]);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(ALL_MONTHS[currentIndex - 1]);
+    }
+  };
+
+  const handleNextMonth = () => {
+    const currentIndex = ALL_MONTHS.indexOf(selectedMonth);
+    if (currentIndex === 11) {
+      setSelectedMonth(ALL_MONTHS[0]);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(ALL_MONTHS[currentIndex + 1]);
+    }
+  };
+
   const handleSaveSettings = e => {
     e.preventDefault();
     const val = Number(settingsAmount);
@@ -320,6 +341,8 @@ export default function AdminDashboard({ currentTab }) {
           settingsSuccess={settingsSuccess} settingsError={settingsError}
           onSaveSettings={handleSaveSettings}
           onOpenTenement={openTenement}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
         />
       )}
 
