@@ -99,3 +99,24 @@ class SettingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     key:   str
     value: str
+
+
+# ── Expenses ───────────────────────────────────────────────────────────────────
+class ExpenseCreate(BaseModel):
+    id:          str
+    category:    str
+    description: str
+    amount:      float
+    date:        str
+    driveLink:   Optional[str] = None
+    billData:    Optional[str] = None
+
+class ExpenseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id:          str
+    category:    str
+    description: str
+    amount:      float
+    date:        str
+    drive_link:  Optional[str] = None
+    bill_data:   Optional[str] = None

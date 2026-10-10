@@ -109,3 +109,18 @@ class SocietySetting(Base):
     id    = Column(Integer, primary_key=True, autoincrement=True)
     key   = Column(String(100), unique=True, nullable=False)
     value = Column(String(255), nullable=False)
+
+
+# ── Expense ───────────────────────────────────────────────────────────────────
+class Expense(Base):
+    """Record of society expenses."""
+    __tablename__ = "expenses"
+
+    id          = Column(String(60), primary_key=True)
+    category    = Column(String(100), nullable=False)
+    description = Column(Text, nullable=False)
+    amount      = Column(Float, nullable=False)
+    date        = Column(String(20), nullable=False) # YYYY-MM-DD
+    drive_link  = Column(String(255), nullable=True)
+    bill_data   = Column(Text, nullable=True) # Base64 string
+    created_at  = Column(DateTime, default=datetime.utcnow)

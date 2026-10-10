@@ -25,13 +25,14 @@ from sqlalchemy.orm import Session, selectinload
 import uvicorn
 
 from database import SessionLocal, engine, get_db
-from db_model import Base, User, Tenement, Due, Installment, Notice, SocietySetting
+from db_model import Base, User, Tenement, Due, Installment, Notice, SocietySetting, Expense
 from db_schema import (
     UserLogin, UserOut,
     TenementCreate, TenementUpdate, TenementOut,
     InstallmentCreate, DueOut,
     NoticeCreate, NoticeOut,
     SettingUpdate, SettingOut,
+    ExpenseCreate, ExpenseOut,
 )
 
 # ── Password hashing ──────────────────────────────────────────────────────────
@@ -529,6 +530,48 @@ def delete_notice(notice_id: str, db: Session = Depends(get_db)):
     db.delete(notice)
     db.commit()
     return {"success": True, "deleted_id": notice_id}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Expenses
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/expenses", response_model=list[ExpenseOut], tags=["Expenses"])
+def get_expenses(db: Session = Depends(get_db)):
+    """Return all expenses, newest first."""
+    return (
+        db.query(Expense)
+        .order_by(Expense.created_at.desc())
+        .all()
+    )
+
+
+@app.post("/expenses", response_model=ExpenseOut, status_code=status.HTTP_201_CREATED, tags=["Expenses"])
+def create_expense(body: ExpenseCreate, db: Session = Depends(get_db)):
+    """Record a new expense."""
+    expense = Expense(
+        id=body.id,
+        category=body.category,
+        description=body.description,
+        amount=body.amount,
+        date=body.date,
+        drive_link=body.driveLink,
+        bill_data=body.billData,
+    )
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+    return expense
+
+
+@app.delete("/expenses/{expense_id}", tags=["Expenses"])
+def delete_expense(expense_id: str, db: Session = Depends(get_db)):
+    """Delete an expense by its ID."""
+    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    db.delete(expense)
+    db.commit()
+    return {"success": True, "deleted_id": expense_id}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
