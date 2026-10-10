@@ -122,5 +122,5 @@ If no Supabase database is connected, the application runs in a fully-interactiv
 | Role | Username | Password |
 | :--- | :--- | :--- |
 | **Administrator** | `ADMIN-01` | `password` |
-| **Resident (Fully Paid)** | `1` *(Amit Patel)* | `password` |
-| **Resident (Unpaid Dues)** | `42` *(Rohan Mehta)* | `password` |
+| **Resident (Fully Paid)** | `1`  | `password` |
+| **Resident (Unpaid Dues)** | `42`  | `password` |
