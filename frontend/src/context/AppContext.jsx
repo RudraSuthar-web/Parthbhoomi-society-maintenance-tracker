@@ -5,8 +5,10 @@ import {
   getTenements, getNotices, createNotice, deleteNoticeById,
   registerTenementBackend, recordInstallmentBackend,
   revertPaymentBackend, updateProfileBackend, deleteTenementBackend, loginBackend,
+  changePasswordBackend,
   getExpenses, createExpenseBackend, deleteExpenseBackend,
 } from '../services/apiService';
+import SOCIETY_CONFIG from '../config/societyConfig';
 
 export const AppContext = createContext();
 
@@ -183,8 +185,8 @@ export const AppProvider = ({ children }) => {
       return { success: false, message: 'Tenement number must contain digits only (no characters).' };
     }
     const num = parseInt(trimmedUnit, 10);
-    if (num < 1 || num > 60) {
-      return { success: false, message: 'Tenement number must be between 1 and 60.' };
+    if (num < 1 || num > SOCIETY_CONFIG.maxTenements) {
+      return { success: false, message: `Tenement number must be between 1 and ${SOCIETY_CONFIG.maxTenements}.` };
     }
     const formattedUnit = String(num);
 
@@ -281,6 +283,34 @@ export const AppProvider = ({ children }) => {
     updateProfileBackend(user.username, formattedName, formattedContact);
 
     return { success: true };
+  };
+
+  // ── Change Password ────────────────────────────────────────────────────────
+  const changePassword = async (oldPassword, newPassword) => {
+    if (!user) return { success: false, message: 'Not logged in' };
+    if (!oldPassword || !newPassword) {
+      return { success: false, message: 'Current and new password are required' };
+    }
+    if (newPassword.length < 4) {
+      return { success: false, message: 'New password must be at least 4 characters' };
+    }
+
+    try {
+      const res = await changePasswordBackend(user.username, oldPassword, newPassword);
+      if (res && res.success) {
+        // Update local session users array if present
+        setUsers(prev => prev.map(u => {
+          if (u.username === user.username) {
+            return { ...u, password: newPassword };
+          }
+          return u;
+        }));
+        return { success: true, message: 'Password changed successfully' };
+      }
+      return { success: false, message: res?.message || 'Failed to change password' };
+    } catch (err) {
+      return { success: false, message: err.message || 'Failed to change password' };
+    }
   };
 
   // ── Add an installment payment (partial or full) ───────────────────────────
@@ -491,6 +521,7 @@ export const AppProvider = ({ children }) => {
         logout,
         registerTenement,
         updateProfile,
+        changePassword,
         deleteTenement,
         addInstallment,
         revertPayment,

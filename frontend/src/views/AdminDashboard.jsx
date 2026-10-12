@@ -1,4 +1,5 @@
 import React, { useContext, useState, useCallback, useEffect } from 'react';
+import { WifiOff } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { ALL_MONTHS } from '../utils/dateUtils';
 
@@ -13,7 +14,9 @@ import MonthlyGridView         from './MonthlyGridView';
 import DrivePreviewModal       from '../components/DrivePreviewModel';
 import DeleteTenementModal     from '../components/admin/DeleteTenementModal';
 import ExpensesTab             from '../components/admin/ExpensesTab';
+import SOCIETY_CONFIG          from '../config/societyConfig';
 import AddExpenseModal         from '../components/admin/AddExpenseModal';
+import ProfileTab              from '../components/resident/ProfileTab';
 
 export default function AdminDashboard({ currentTab }) {
   const {
@@ -235,7 +238,7 @@ export default function AdminDashboard({ currentTab }) {
     const trimmed = newTenementNumber.trim();
     if (!/^\d+$/.test(trimmed)) { setAdminRegError('Tenement number must contain digits only.'); return; }
     const num = parseInt(trimmed, 10);
-    if (num < 1 || num > 60) { setAdminRegError('Tenement number must be between 1 and 60.'); return; }
+    if (num < 1 || num > SOCIETY_CONFIG.maxTenements) { setAdminRegError(`Tenement number must be between 1 and ${SOCIETY_CONFIG.maxTenements}.`); return; }
     const result = registerTenement(newTenementNumber, newName, newContact, newPassword);
     if (result.success) {
       setAdminRegSuccess(`Tenement ${trimmed} registered successfully!`);
@@ -301,8 +304,8 @@ export default function AdminDashboard({ currentTab }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-mono text-primary animate-pulse">Loading administration data...</p>
+        <div className="w-12 h-12 border-4 border-primary dark:border-white border-t-transparent dark:border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-mono text-primary dark:text-zinc-200 animate-pulse">Loading administration data...</p>
       </div>
     );
   }
@@ -310,14 +313,14 @@ export default function AdminDashboard({ currentTab }) {
   if (error === 'network_error') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-3 px-4 text-center">
-        <span className="material-symbols-outlined !text-5xl text-slate-400">wifi_off</span>
-        <p className="text-md font-bold text-on-surface">Network connection error</p>
-        <p className="text-xs text-on-surface-variant font-mono">
+        <WifiOff className="w-12 h-12 text-slate-400 dark:text-zinc-500 stroke-[1.5]" />
+        <p className="text-md font-bold text-on-surface dark:text-zinc-100">Network connection error</p>
+        <p className="text-xs text-on-surface-variant dark:text-zinc-400 font-mono">
           We couldn't connect to the server. Please check your internet connection and try again.
         </p>
         <button
           onClick={retry}
-          className="mt-2 px-5 py-2 bg-primary hover:bg-primary-hover text-white font-bold rounded-md shadow-md transition-all active:scale-95 text-sm flex items-center gap-1.5"
+          className="mt-2 px-5 py-2 bg-primary dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm flex items-center gap-1.5"
         >
           Retry Connection
         </button>
@@ -327,7 +330,7 @@ export default function AdminDashboard({ currentTab }) {
 
   return (
     <>
-      {(activeTab === 'overview' || !['tenements', 'monthly-grid', 'notices', 'expenses'].includes(activeTab)) && (
+      {(activeTab === 'overview' || !['tenements', 'monthly-grid', 'notices', 'expenses', 'profile'].includes(activeTab)) && (
         <OverviewTab
           selectedMonth={selectedMonth} selectedYear={selectedYear}
           totalTenementsCount={totalTenementsCount}
@@ -343,6 +346,7 @@ export default function AdminDashboard({ currentTab }) {
           onOpenTenement={openTenement}
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
+          onOpenPublish={() => setIsPublishNoticeOpen(true)}
         />
       )}
 
@@ -397,6 +401,10 @@ export default function AdminDashboard({ currentTab }) {
             }
           }}
         />
+      )}
+
+      {activeTab === 'profile' && (
+        <ProfileTab />
       )}
 
       <DrivePreviewModal

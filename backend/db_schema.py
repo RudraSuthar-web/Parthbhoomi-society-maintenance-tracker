@@ -7,6 +7,11 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class UserPasswordChange(BaseModel):
+    username: str
+    old_password: str
+    new_password: str = Field(..., min_length=4)
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     username: str

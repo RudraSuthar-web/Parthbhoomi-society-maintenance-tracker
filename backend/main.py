@@ -27,7 +27,7 @@ import uvicorn
 from database import SessionLocal, engine, get_db
 from db_model import Base, User, Tenement, Due, Installment, Notice, SocietySetting, Expense
 from db_schema import (
-    UserLogin, UserOut,
+    UserLogin, UserPasswordChange, UserOut,
     TenementCreate, TenementUpdate, TenementOut,
     InstallmentCreate, DueOut,
     NoticeCreate, NoticeOut,
@@ -233,6 +233,30 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid username or password",
         )
     return user
+
+
+@app.post("/auth/change-password", tags=["Auth"])
+def change_password(body: UserPasswordChange, db: Session = Depends(get_db)):
+    """
+    Change user password after verifying their existing password.
+    Works for both residents and admins.
+    """
+    user = db.query(User).filter(User.username == body.username).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if not verify_password(body.old_password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    user.password = hash_password(body.new_password)
+    db.commit()
+    return {"status": "ok", "message": "Password changed successfully"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

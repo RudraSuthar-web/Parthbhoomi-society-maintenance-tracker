@@ -1,6 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import SOCIETY_CONFIG from '../config/societyConfig';
+import { CloudCheck, X } from 'lucide-react';
+import { DriveIcon } from './admin/ExpensesTab';
 
 export default function DrivePreviewModal({ isOpen, onClose, expense }) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
   if (!isOpen || !expense) return null;
 
   const { description, amount, date, category, driveLink, billData } = expense;
@@ -12,7 +25,7 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
         {/* Header */}
         <div className="border-b border-outline-variant pb-3 mb-4 text-center">
           <h4 className="text-sm font-bold text-on-surface uppercase tracking-wider">OFFICIAL INVOICE</h4>
-          <p className="text-[10px] text-on-surface-variant font-medium mt-0.5">Parthbhoomi Society Expense Records</p>
+          <p className="text-[10px] text-on-surface-variant font-medium mt-0.5">{SOCIETY_CONFIG.expenseTag}</p>
         </div>
 
         {/* Invoice details */}
@@ -59,23 +72,21 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
     );
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm">
-      <div className="bg-[#1e1e1e] rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col h-[85vh] text-white">
+  const modalNode = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#1e1e1e] rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col h-[85vh] text-white animate-scaleIn">
         
         {/* Google Drive styled top bar */}
         <div className="bg-[#2d2d2d] px-4 py-3 flex items-center justify-between border-b border-[#3d3d3d]">
           {/* File logo & Name */}
           <div className="flex items-center space-x-3.5 min-w-0">
-            <span className="material-symbols-outlined text-amber-500 text-2xl" title="Stored in Google Drive">
-              add_to_drive
-            </span>
+            <DriveIcon className="w-6 h-6 flex-shrink-0" />
             <div className="min-w-0">
               <h3 className="text-sm font-bold truncate leading-tight">
                 {description.replace(/\s+/g, '_').toLowerCase()}_bill.{billData ? 'jpg' : 'pdf'}
               </h3>
               <p className="text-[10px] text-gray-400 font-semibold flex items-center mt-0.5">
-                <span className="material-symbols-outlined text-xs mr-0.5 text-blue-400">cloud_done</span>
+                <CloudCheck className="w-3.5 h-3.5 mr-1 text-blue-400 flex-shrink-0" />
                 <span>Google Drive Preview</span>
               </p>
             </div>
@@ -83,13 +94,12 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
 
           {/* Action buttons */}
           <div className="flex items-center space-x-3">
-            
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-[#3d3d3d] rounded-full transition-all active-scale text-gray-300 hover:text-white flex items-center justify-center"
+              className="p-1.5 hover:bg-[#3d3d3d] rounded-full transition-all active:scale-95 text-gray-300 hover:text-white flex items-center justify-center"
               title="Close Preview"
             >
-              <span className="material-symbols-outlined text-lg">close</span>
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -123,4 +133,9 @@ export default function DrivePreviewModal({ isOpen, onClose, expense }) {
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalNode, document.body);
+  }
+  return modalNode;
 }

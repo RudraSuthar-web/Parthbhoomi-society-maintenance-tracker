@@ -627,3 +627,56 @@ export async function loginBackend(username, password) {
     body: JSON.stringify({ username, password }),
   });
 }
+
+/**
+ * Change password against Supabase or FastAPI backend
+ */
+export async function changePasswordBackend(username, oldPassword, newPassword) {
+  if (isSupabaseConfigured) {
+    try {
+      // 1. Verify old password
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+      if (error || !data) {
+        return { success: false, message: 'User not found' };
+      }
+
+      if (data.password !== oldPassword) {
+        return { success: false, message: 'Current password is incorrect' };
+      }
+
+      // 2. Update to new password
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ password: newPassword })
+        .eq('username', username);
+
+      if (updateError) {
+        return { success: false, message: updateError.message || 'Failed to update password' };
+      }
+
+      return { success: true, message: 'Password updated successfully' };
+    } catch (e) {
+      console.warn('Supabase password update error:', e);
+      return { success: false, message: e.message || 'Failed to update password' };
+    }
+  }
+
+  try {
+    const res = await apiFetch('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        username,
+        old_password: oldPassword,
+        new_password: newPassword,
+      }),
+    });
+    return { success: true, message: res?.message || 'Password updated successfully' };
+  } catch (err) {
+    return { success: false, message: err.message || 'Failed to update password' };
+  }
+}

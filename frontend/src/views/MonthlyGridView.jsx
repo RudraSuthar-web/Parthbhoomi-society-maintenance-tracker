@@ -1,4 +1,12 @@
 import React, { useContext, useState, useCallback, useMemo } from 'react';
+import { 
+  Banknote, 
+  Hourglass, 
+  TrendingUp, 
+  Building2, 
+  LayoutGrid, 
+  SearchX 
+} from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { ALL_MONTHS, CURRENT_MONTH, CURRENT_YEAR, formatDate, getBilledMonths } from '../utils/dateUtils';
 
@@ -123,7 +131,7 @@ export default function MonthlyGridView() {
   if (tenements.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-3">
-        <span className="material-symbols-outlined text-5xl text-slate-300">grid_view</span>
+        <LayoutGrid className="w-12 h-12 text-slate-300 stroke-[1.5]" />
         <p className="text-sm font-semibold text-on-surface-variant">No tenements registered yet.</p>
         <p className="text-xs text-on-surface-variant">Add tenements from the All Tenements tab to see the monthly grid.</p>
       </div>
@@ -133,27 +141,27 @@ export default function MonthlyGridView() {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <>
-      <style>{`@media print { @page { size: A4 landscape !important; margin: 10mm; } }`}</style>
-      <div className="space-y-5 animate-fadeIn">
+      <style>{`@media print { @page { size: A4 landscape !important; margin: 8mm; } }`}</style>
+      <div className="space-y-5 animate-fadeIn print:space-y-0 print:m-0">
 
-        {/* Page header */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-soft p-5 sm:p-6">
+        {/* Page header (Screen only) */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-soft p-5 sm:p-6 print:hidden">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-widest">
                 Monthly Collection Register
               </span>
-              <h2 className="font-display-lg text-on-surface ">
-                Payment Matrix <span className="text-primary">{selectedYear}</span>
+              <h2 className="font-display-lg text-on-surface dark:text-zinc-100">
+                Payment Matrix <span className="text-primary dark:text-white">{selectedYear}</span>
               </h2>
-              <p className="text-xs text-on-surface-variant mt-1">
+              <p className="text-xs text-on-surface-variant dark:text-zinc-400 mt-1">
                 Annual maintenance status for all {tenements.length} tenements · FY {selectedYear}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white text-xs font-bold rounded-lg  shadow-lg transition-all duration-150 active-scale focus:outline-none focus:ring-2 focus:ring-slate-500"
+                className="flex items-center gap-1.5 px-3 py-2 bg-primary dark:bg-white text-white dark:text-zinc-950 text-xs font-bold rounded-lg shadow-lg transition-all duration-150 active-scale focus:outline-none focus:ring-2 focus:ring-slate-500"
               >
                 Print Register
               </button>
@@ -161,24 +169,29 @@ export default function MonthlyGridView() {
           </div>
         </div>
 
-        {/* KPI strip */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 print:grid-cols-4 print:mb-6  rounded-xl ">
+        {/* KPI strip (Screen only) */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 print:hidden rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 divide-x divide-y xl:divide-y-0 divide-slate-200 dark:divide-zinc-800">
           {[
-            { label: `YTD Collected (${selectedYear})`, value: `₹${(grandCollected / 1000).toFixed(1)}k`, sub: `${grandPaidSlots} fully paid slots`, icon: 'payments', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700', valueColor: 'text-emerald-700' },
-            { label: 'Outstanding Amount', value: `₹${(grandPendingAmt / 1000).toFixed(1)}k`, sub: `${monthStats.reduce((s, m) => s + m.unpaid + m.partial, 0)} unpaid/partial slots`, icon: 'hourglass_empty', iconBg: 'bg-red-50', iconColor: 'text-error', valueColor: 'text-error' },
-            { label: 'Collection Rate', value: `${overallRate}%`, sub: `${grandPaidSlots} of ${tenements.length * 12} slots paid`, icon: 'trending_up', iconBg: 'bg-blue-50', iconColor: 'text-primary', valueColor: 'text-primary' },
-            { label: 'Total Tenements', value: tenements.length, sub: `Maintenance: ₹${maintenanceAmount.toLocaleString('en-IN')}/mo`, icon: 'home_work', iconBg: 'bg-slate-50', iconColor: 'text-slate-600', valueColor: 'text-on-surface' },
-          ].map(kpi => (
-            <div key={kpi.label} className="bg-white border border-slate-200 p-4 shadow-soft flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider leading-none">{kpi.label}</p>
-                <p className={`font-extrabold text-lg mt-1 leading-tight ${kpi.valueColor}`}>{kpi.value}</p>
-                <p className="text-[12px] text-on-surface-variant font-medium mt-0.5 truncate">{kpi.sub}</p>
+            { label: `YTD Collected (${selectedYear})`, value: `₹${(grandCollected / 1000).toFixed(1)}k`, sub: `${grandPaidSlots} fully paid slots`, Icon: Banknote, iconColor: 'text-emerald-700 dark:text-emerald-500', valueColor: 'text-emerald-700 dark:text-emerald-400' },
+            { label: 'Outstanding Amount', value: `₹${(grandPendingAmt / 1000).toFixed(1)}k`, sub: `${monthStats.reduce((s, m) => s + m.unpaid + m.partial, 0)} unpaid/partial slots`, Icon: Hourglass, iconColor: 'text-error dark:text-red-500', valueColor: 'text-error dark:text-red-400' },
+            { label: 'Collection Rate', value: `${overallRate}%`, sub: `${grandPaidSlots} of ${tenements.length * 12} slots paid`, Icon: TrendingUp, iconColor: 'text-primary dark:text-white', valueColor: 'text-primary dark:text-white' },
+            { label: 'Total Tenements', value: tenements.length, sub: `Maintenance: ₹${maintenanceAmount.toLocaleString('en-IN')}/mo`, Icon: Building2, iconColor: 'text-slate-600 dark:text-zinc-400', valueColor: 'text-on-surface dark:text-zinc-100' },
+          ].map(kpi => {
+            const KpiIcon = kpi.Icon;
+            return (
+              <div key={kpi.label} className="relative overflow-hidden bg-white dark:bg-zinc-900 p-4 shadow-soft flex items-start justify-between gap-3">
+                <div className="relative z-10 min-w-0">
+                  <p className="text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider leading-none">{kpi.label}</p>
+                  <p className={`font-extrabold text-lg mt-1 leading-tight ${kpi.valueColor}`}>{kpi.value}</p>
+                  <p className="text-[12px] text-on-surface-variant dark:text-zinc-400 font-medium mt-0.5 truncate">{kpi.sub}</p>
+                </div>
+                <KpiIcon
+                  aria-hidden="true"
+                  className={`absolute -bottom-3 -right-3 w-16 h-16 sm:w-20 sm:h-20 opacity-[0.06] dark:opacity-[0.08] stroke-[1.5] pointer-events-none select-none ${kpi.iconColor}`}
+                />
               </div>
-              <span className={`material-symbols-outlined text-[18px] ${kpi.iconColor}`}>{kpi.icon}</span>
-            
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Toolbar */}
@@ -186,9 +199,9 @@ export default function MonthlyGridView() {
 
         {/* Grid or empty */}
         {sorted.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-soft">
-            <span className="material-symbols-outlined text-4xl text-slate-300">search_off</span>
-            <p className="text-sm font-semibold text-on-surface-variant mt-2">No tenements match your search.</p>
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-12 text-center shadow-soft">
+            <SearchX className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto stroke-[1.5]" />
+            <p className="text-sm font-semibold text-on-surface-variant dark:text-zinc-400 mt-2">No tenements match your search.</p>
           </div>
         ) : (
           <GridTable

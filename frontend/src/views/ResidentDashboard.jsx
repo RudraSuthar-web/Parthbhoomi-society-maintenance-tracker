@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { WifiOff, AlertCircle } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 
 import DashboardTab from '../components/resident/DashboardTab';
@@ -64,10 +65,10 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-primary dark:border-white border-t-transparent dark:border-t-transparent rounded-full animate-spin"></div>
         <p 
           key={msgIdx} 
-          className="text-sm font-mono text-primary animate-fade transition-all duration-300"
+          className="text-sm font-mono text-primary dark:text-zinc-200 animate-fade transition-all duration-300"
         >
           {LOADING_MESSAGES[msgIdx]}
         </p>
@@ -78,14 +79,14 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
   if (error === 'network_error') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-3 px-4 text-center">
-        <span className="material-symbols-outlined !text-5xl text-slate-400">wifi_off</span>
-        <p className="text-md font-bold text-on-surface">Network connection error</p>
-        <p className="text-xs font-mono text-on-surface-variant ">
+        <WifiOff className="w-12 h-12 text-slate-400 dark:text-zinc-500" />
+        <p className="text-md font-bold text-on-surface dark:text-zinc-100">Network connection error</p>
+        <p className="text-xs font-mono text-on-surface-variant dark:text-zinc-400">
           We couldn't connect to the server. Please check your internet connection and try again.
         </p>
         <button
           onClick={retry}
-          className="mt-2 px-5 py-2 bg-primary hover:bg-primary-hover text-white font-bold rounded-md shadow-md transition-all active:scale-95 text-sm flex items-center gap-1.5"
+          className="mt-2 px-5 py-2 bg-primary dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold rounded-xl shadow-md transition-all active:scale-95 text-sm flex items-center gap-1.5"
         >
           Retry Connection
         </button>
@@ -96,9 +97,9 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
   if (!tenementData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-3 px-4 text-center">
-        <span className="material-symbols-outlined text-5xl text-error">error_outline</span>
-        <p className="text-sm font-bold text-error">Something went wrong.</p>
-        <p className="text-xs text-on-surface-variant font-mono">Contact the society administrator to resolve this issue.</p>
+        <AlertCircle className="w-12 h-12 text-error dark:text-red-400" />
+        <p className="text-sm font-bold text-error dark:text-red-400">Something went wrong.</p>
+        <p className="text-xs text-on-surface-variant dark:text-zinc-400 font-mono">Contact the society administrator to resolve this issue.</p>
       </div>
     );
   }

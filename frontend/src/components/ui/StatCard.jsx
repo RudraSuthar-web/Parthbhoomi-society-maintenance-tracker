@@ -1,26 +1,28 @@
 import React from 'react';
 
 /**
- * StatCard — reusable KPI card
+ * StatCard — reusable KPI card supporting light and dark themes.
  * Props:
  *   label  {string}  — metric label
  *   value  {string|number} — primary value displayed large
  *   sub    {string}  — small subtitle
- *   icon   {string}  — material symbol name
+ *   icon   {React.ComponentType}  — Lucide or React icon component
  *   color  {string}  — tailwind text color class for icon
- *   bg     {string}  — tailwind bg color class for icon container
  */
-export default function StatCard({ label, value, sub, icon, color, bg }) {
+export default function StatCard({ label, value, sub, icon: Icon, color }) {
   return (
-    <div className="bg-white flex justify-between border border-slate-200 rounded-xl p-2 sm:p-3 shadow-soft">
-      <div>
-        <p className="font-extrabold text-xl text-on-surface">{value}</p>
-        <p className="text-[14px] font-bold text-on-surface-variant uppercase tracking-wider mt-0.5">{label}</p>
-        <p className="text-[13px] text-on-surface-variant mt-0.5">{sub}</p>
+    <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 sm:p-4 shadow-soft transition-colors duration-200">
+      <div className="relative z-10">
+        <p className="font-extrabold text-xl sm:text-2xl text-on-surface dark:text-zinc-100">{value}</p>
+        <p className="text-[13px] sm:text-[14px] font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider mt-0.5">{label}</p>
+        {sub && <p className="text-[12px] sm:text-[13px] text-on-surface-variant dark:text-zinc-400 mt-0.5">{sub}</p>}
       </div>
-      <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mb-2`}>
-        <span className={`material-symbols-outlined text-[18px] ${color}`}>{icon}</span>
-      </div>
+      {Icon && (
+        <Icon
+          aria-hidden="true"
+          className={`absolute -bottom-3 -right-3 w-20 h-20 sm:w-24 sm:h-24 opacity-20 pointer-events-none select-none ${color || 'text-primary dark:text-zinc-200'}`}
+        />
+      )}
     </div>
   );
 }

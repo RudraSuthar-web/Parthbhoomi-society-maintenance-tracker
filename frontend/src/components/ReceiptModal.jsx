@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDate } from '../utils/dateUtils';
+import SOCIETY_CONFIG from '../config/societyConfig';
 
 export default function ReceiptModal({ isOpen, onClose, receiptData }) {
   useEffect(() => {
@@ -35,13 +36,13 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
       onKeyDown={handleKeyDown}
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:p-0 print:bg-transparent print:static print:flex print:items-start print:justify-center print:pt-10"
     >
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden flex flex-col relative animate-scaleIn print:shadow-none print:w-[180mm] print:max-w-none print:border-2 print:border-slate-200" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl max-w-md w-full overflow-hidden flex flex-col relative animate-scaleIn print:bg-white print:shadow-none print:w-[180mm] print:max-w-none print:border-2 print:border-slate-200 print:text-black" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
 
         {/* Close button */}
         <button
           onClick={onClose}
           autoFocus
-          className="absolute top-4 right-4 w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-all active-scale print:hidden focus:outline-none focus:ring-2 focus:ring-primary"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-all active-scale print:hidden focus:outline-none focus:ring-2 focus:ring-primary"
           aria-label="Close receipt"
         >
           <span className="material-symbols-outlined text-xl">close</span>
@@ -51,7 +52,7 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
         <div className="bg-primary/90 text-white px-6 pt-8 pb-6 text-center">
           <span className="material-symbols-outlined text-5xl mb-2 print:hidden">verified</span>
           <h2 className="text-xl font-extrabold tracking-tight">
-            Parthbhoomi CHS
+            {SOCIETY_CONFIG.name}
           </h2>
           <p className="text-xs text-blue-200 mt-1 font-medium">
             Society Maintenance Receipt · FY {year || ''}
@@ -62,14 +63,14 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
         <div className="p-6 flex-1 space-y-5 print:px-2">
 
           {/* Amount hero */}
-          <div className="text-center pb-4 border-b border-dashed border-slate-200">
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Amount Received</p>
-            <p className="text-4xl font-extrabold text-on-surface mt-1 tracking-tight">
+          <div className="text-center pb-4 border-b border-dashed border-slate-200 dark:border-zinc-800 print:border-slate-300">
+            <p className="text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 print:text-slate-600 uppercase tracking-widest">Amount Received</p>
+            <p className="text-4xl font-extrabold text-on-surface dark:text-zinc-100 print:text-black mt-1 tracking-tight">
               ₹{(amount || 0).toLocaleString('en-IN')}
             </p>
             <div className="flex items-center justify-center gap-1.5 mt-2">
               <span className="material-symbols-outlined text-emerald-500 text-base">verified</span>
-              <span className="text-xs text-emerald-600 font-bold">Payment Fully Cleared</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 print:text-emerald-700 font-bold">Payment Fully Cleared</span>
             </div>
           </div>
 
@@ -84,8 +85,8 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
               { label: 'Payment Mode',   value: method || 'Cheque / Cash' },
             ].map(({ label, value, mono, highlight }) => (
               <div key={label}>
-                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{label}</p>
-                <p className={`font-semibold text-sm mt-0.5 ${mono ? 'font-mono' : ''} ${highlight ? 'text-primary' : 'text-on-surface'}`}>
+                <p className="text-[10px] font-bold text-on-surface-variant dark:text-zinc-400 print:text-slate-600 uppercase tracking-wider">{label}</p>
+                <p className={`font-semibold text-sm mt-0.5 ${mono ? 'font-mono' : ''} ${highlight ? 'text-primary dark:text-white print:text-primary' : 'text-on-surface dark:text-zinc-100 print:text-black'}`}>
                   {value}
                 </p>
               </div>
@@ -93,35 +94,35 @@ export default function ReceiptModal({ isOpen, onClose, receiptData }) {
           </div>
 
           {/* Declaration + signatures */}
-          <div className="pt-4 border-t border-slate-100 space-y-4">
-            <p className="text-[11px] text-on-surface-variant leading-relaxed text-center">
+          <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 print:border-slate-200 space-y-4">
+            <p className="text-[11px] text-on-surface-variant dark:text-zinc-400 print:text-slate-700 leading-relaxed text-center">
               This receipt is electronically generated upon manual validation by the{' '}
-              Parthbhoomi Society Management Committee. No online gateway is involved.
+              {SOCIETY_CONFIG.shortName} Society Management Committee. No online gateway is involved.
             </p>
             <div className="flex justify-between items-end pt-2">
               <div>
-                <div className="h-6 w-24 border-b border-slate-300 mb-1" />
-                <p className="text-[10px] text-on-surface-variant">Signature of Payee</p>
+                <div className="h-6 w-24 border-b border-slate-300 dark:border-zinc-600 print:border-slate-800 mb-1" />
+                <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 print:text-slate-600">Signature of Payee</p>
               </div>
               <div className="text-right">
-                <p className="text-xs font-extrabold text-primary font-mono select-none">
-                  PARTHBHOOMI_CHS
+                <p className="text-xs font-extrabold text-primary dark:text-white print:text-primary font-mono select-none">
+                  {SOCIETY_CONFIG.code}
                 </p>
-                <p className="text-[10px] text-on-surface-variant">Authorized Signatory</p>
+                <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 print:text-slate-600">Authorized Signatory</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Action footer */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3 print:hidden">
-          <p className="text-[10px] text-on-surface-variant font-medium">
-            Ref: <span className="font-mono font-bold text-primary">{reference}</span>
+        <div className="bg-slate-50 dark:bg-zinc-900/90 px-6 py-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3 print:hidden">
+          <p className="text-[10px] text-on-surface-variant dark:text-zinc-400 font-medium">
+            Ref: <span className="font-mono font-bold text-primary dark:text-white">{reference}</span>
           </p>
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-slate-200 bg-white text-on-surface text-xs font-bold rounded-xl hover:bg-slate-50 transition-all active-scale focus:outline-none"
+              className="px-4 py-2 border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-on-surface dark:text-zinc-200 text-xs font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-700 transition-all active-scale focus:outline-none"
             >
               Close
             </button>

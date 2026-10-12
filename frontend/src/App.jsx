@@ -5,6 +5,7 @@ import Login from './views/Login';
 import Layout from './components/Layout';
 import ResidentDashboard from './views/ResidentDashboard';
 import AdminDashboard from './views/AdminDashboard';
+import SOCIETY_CONFIG from './config/societyConfig';
 
 function AppContent() {
   const { user } = useContext(AppContext);
@@ -26,6 +27,11 @@ function AppContent() {
     }
   }, [user]);
 
+  // Set dynamic document title from config
+  useEffect(() => {
+    document.title = `${SOCIETY_CONFIG.name} · Maintenance Tracker`;
+  }, []);
+
   // Scroll to top on tab switch
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -33,7 +39,7 @@ function AppContent() {
 
   // Central navigation dispatcher to handle routing + subview tabs
   const handleNavigate = (viewName) => {
-    const adminTabs    = ['overview', 'tenements', 'notices', 'monthly-grid', 'expenses'];
+    const adminTabs    = ['overview', 'tenements', 'notices', 'monthly-grid', 'expenses', 'profile'];
     const residentTabs = ['dashboard', 'ledger', 'notices', 'profile', 'expenses'];
 
     if (adminTabs.includes(viewName)) {
