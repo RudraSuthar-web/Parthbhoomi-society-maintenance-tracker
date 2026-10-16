@@ -195,7 +195,7 @@ export default function ProfileTab({
               <div className="py-2.5 flex items-center justify-between">
                 <span className="font-bold text-on-surface-variant dark:text-zinc-400 uppercase tracking-wider text-[11px]">Society Code</span>
                 <span className="font-bold font-mono text-on-surface dark:text-zinc-200">
-                  {SOCIETY_CONFIG.code || 'PARTHBHOOMI_CHS'}
+                  {SOCIETY_CONFIG.code || 'CHS'}
                 </span>
               </div>
             </div>

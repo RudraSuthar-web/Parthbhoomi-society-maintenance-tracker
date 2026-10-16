@@ -192,6 +192,12 @@
 .animate-fadeInDown   { animation: fadeInDown 220ms ease both; }
 .animate-slideInUp    { animation: slideInUp 280ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-scaleIn      { animation: scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slideLeft    { animation: slideLeft 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes slideLeft {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
 
 /* Skeleton loader */
 .skeleton {
@@ -305,6 +311,27 @@
       transparent 100%
     );
   }
+}
+
+/* ─── Infinite Marquee (Bus Display style) ─────────────── */
+@keyframes marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-infinite {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: marquee-scroll var(--marquee-duration, 10s) linear infinite;
+}
+
+.animate-marquee-infinite:hover {
+  animation-play-state: paused;
 }
 
 /* ─── Print Styles ─────────────────────────────────────── */

@@ -139,7 +139,7 @@ export default function DashboardTab({
         <>
           <div ref={sentinelRef} className="h-0 w-0" />
           <div
-            className={`sticky top-[65px] md:top-0 z-30 transition-all duration-300 ${
+            className={`sticky top-[70px] md:top-0 z-30 transition-all duration-300 ${
               isStuck
                 ? 'md:-mx-6 md:-mt-16 lg:-mx-8 lg:-mt-16'
                 : 'mx-0 mt-0'

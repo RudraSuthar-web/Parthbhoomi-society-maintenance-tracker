@@ -65,7 +65,7 @@ export default function PeriodSelector() {
   return (
     <div className="relative" ref={popoverRef}>
       {/* Trigger pill */}
-      <div className="rounded-full lg:rounded-xl border border-slate-300 dark:border-zinc-700 lg:bg-slate-50/80 dark:lg:bg-zinc-800/60 bg-white/80 dark:bg-zinc-800/60 backdrop-blur-md shadow-md overflow-hidden transition-all duration-150">
+      <div className="rounded-full lg:rounded-xl border border-slate-300 dark:border-zinc-700 lg:bg-slate-50/8  0 dark:lg:bg-zinc-800/80 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md shadow-md overflow-hidden transition-all duration-150">
         <div className="flex items-center justify-between px-3 py-2 gap-2">
           {/* Main button to toggle calendar popover */}
           <button

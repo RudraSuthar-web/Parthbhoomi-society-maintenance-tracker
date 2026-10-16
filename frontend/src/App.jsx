@@ -79,7 +79,7 @@ function AppContent() {
         element={
           user && user.role === 'admin' ? (
             <Layout currentTab={currentTab} setCurrentTab={setCurrentTab}>
-              <AdminDashboard currentTab={currentTab} />
+              <AdminDashboard currentTab={currentTab} setCurrentTab={setCurrentTab} />
             </Layout>
           ) : (
             <Navigate to="/login" replace />

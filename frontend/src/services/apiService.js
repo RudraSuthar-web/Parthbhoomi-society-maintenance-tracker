@@ -680,3 +680,179 @@ export async function changePasswordBackend(username, oldPassword, newPassword) 
     return { success: false, message: err.message || 'Failed to update password' };
   }
 }
+
+// ── Notifications Service ───────────────────────────────────────────────────
+
+const LOCAL_STORAGE_NOTIFS_KEY = 'parthbhoomi_notifications';
+
+function getLocalNotifications() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_NOTIFS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLocalNotifications(notifs) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_NOTIFS_KEY, JSON.stringify(notifs));
+  } catch (e) {
+    console.error('Failed to save notifications to localStorage', e);
+  }
+}
+
+/**
+ * Fetch notifications (scoped to tenement_number or global/broadcast)
+ */
+export async function getNotifications(username = null, role = null) {
+  if (isSupabaseConfigured) {
+    try {
+      let query = supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (role !== 'admin' && username) {
+        // Resident sees broadcast notifications (tenement_number is null or 'ALL') or specific to their unit
+        query = query.or(`tenement_number.is.null,tenement_number.eq.ALL,tenement_number.eq.${username}`);
+      }
+
+      const { data, error } = await query;
+      if (!error && data) {
+        return data.map(n => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: n.type || 'info', // 'payment', 'notice', 'due', 'info'
+          tenementNumber: n.tenement_number,
+          isRead: Boolean(n.is_read),
+          createdAt: n.created_at,
+          linkTab: n.link_tab || null,
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase fetch notifications error:', e);
+    }
+  }
+
+  // Fallback to local storage
+  const local = getLocalNotifications();
+  if (role === 'admin') {
+    return local;
+  }
+  return local.filter(n => !n.tenementNumber || n.tenementNumber === 'ALL' || n.tenementNumber === username);
+}
+
+/**
+ * Create a new notification
+ */
+export async function createNotificationBackend({ title, message, type = 'info', tenementNumber = null, linkTab = null }) {
+  const notif = {
+    id: 'notif_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    title,
+    message,
+    type,
+    tenementNumber,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+    linkTab,
+  };
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from('notifications').insert([{
+        id: notif.id,
+        title: notif.title,
+        message: notif.message,
+        type: notif.type,
+        tenement_number: tenementNumber,
+        is_read: false,
+        created_at: notif.createdAt,
+        link_tab: linkTab,
+      }]);
+    } catch (e) {
+      console.warn('Supabase create notification error (will store locally):', e);
+    }
+  }
+
+  // Update local storage cache
+  const local = getLocalNotifications();
+  const updated = [notif, ...local].slice(0, 50);
+  saveLocalNotifications(updated);
+  return notif;
+}
+
+/**
+ * Mark notification as read
+ */
+export async function markNotificationReadBackend(id) {
+  if (isSupabaseConfigured) {
+    try {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+    } catch (e) {
+      console.warn('Supabase mark notification read error:', e);
+    }
+  }
+
+  const local = getLocalNotifications();
+  const updated = local.map(n => n.id === id ? { ...n, isRead: true } : n);
+  saveLocalNotifications(updated);
+}
+
+/**
+ * Mark all notifications as read
+ */
+export async function markAllNotificationsReadBackend(username = null, role = null) {
+  if (isSupabaseConfigured) {
+    try {
+      let query = supabase.from('notifications').update({ is_read: true });
+      if (role !== 'admin' && username) {
+        query = query.or(`tenement_number.is.null,tenement_number.eq.ALL,tenement_number.eq.${username}`);
+      }
+      await query;
+    } catch (e) {
+      console.warn('Supabase mark all notifications read error:', e);
+    }
+  }
+
+  const local = getLocalNotifications();
+  const updated = local.map(n => {
+    if (role === 'admin' || !n.tenementNumber || n.tenementNumber === 'ALL' || n.tenementNumber === username) {
+      return { ...n, isRead: true };
+    }
+    return n;
+  });
+  saveLocalNotifications(updated);
+}
+
+/**
+ * Clear all notifications
+ */
+export async function clearAllNotificationsBackend(username = null, role = null) {
+  if (isSupabaseConfigured) {
+    try {
+      let query = supabase.from('notifications').delete();
+      if (role !== 'admin' && username) {
+        query = query.or(`tenement_number.is.null,tenement_number.eq.ALL,tenement_number.eq.${username}`);
+      } else {
+        query = query.neq('id', 'keep_all');
+      }
+      await query;
+    } catch (e) {
+      console.warn('Supabase clear notifications error:', e);
+    }
+  }
+
+  if (role === 'admin') {
+    saveLocalNotifications([]);
+  } else {
+    const local = getLocalNotifications();
+    const updated = local.filter(n => n.tenementNumber && n.tenementNumber !== 'ALL' && n.tenementNumber !== username);
+    saveLocalNotifications(updated);
+  }
+}

@@ -1,7 +1,8 @@
 import React from 'react';
 import AlertBanner from '../ui/AlertBanner';
 import EmptyState from '../ui/EmptyState';
-import { CheckCircle2, ChevronLeft, ChevronRight, Megaphone, Banknote, Hourglass, Plus } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Megaphone, Banknote, Hourglass, Plus, MessageCircle } from 'lucide-react';
+import { openWhatsAppReminder } from '../../utils/whatsappUtils';
 
 /**
  * OverviewTab — Admin "Global Overview" tab.
@@ -173,34 +174,61 @@ export default function OverviewTab({
                 const due = t.dues.find(d => d.month === selectedMonth && d.year === selectedYear);
                 const isPartial = due?.status === 'Partial';
                 return (
-                  <button
+                  <div
                     key={t.tenementNumber}
-                    onClick={() => onOpenTenement(t.tenementNumber)}
-                    className={`
-                      group relative aspect-square flex flex-col items-center justify-center
-                      active:scale-95 transition-all duration-150
-                      cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2
-                      ${isPartial
-                        ? 'bg-amber-50 dark:bg-zinc-900 hover:bg-amber-100 dark:hover:bg-amber-950/40 focus:ring-amber-400'
-                        : 'bg-white dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/40 focus:ring-error'
-                      }
-                    `}
-                    aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
+                    className="relative group aspect-square"
                   >
-                    <span className={`text-xl sm:text-xl font-extrabold leading-none group-hover:translate-y-[-10px] transition-transform duration-150 ${isPartial ? 'text-amber-700 dark:text-amber-400' : 'text-error dark:text-red-400'}`}>
-                      {t.tenementNumber}
-                    </span>
-                    {isPartial && (
-                      <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400 uppercase mt-0.5">Partial</span>
-                    )}
-                    <span className="
-                      absolute bottom-0 left-0 right-0 bg-black/70 text-white 
-                      text-[12px] font-bold text-center py-0.5
-                      opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate px-1
-                    ">
-                      {t.ownerName.split(' ')[0]}
-                    </span>
-                  </button>
+                    <button
+                      onClick={() => onOpenTenement(t.tenementNumber)}
+                      className={`
+                        w-full h-full flex flex-col items-center justify-center
+                        active:scale-95 transition-all duration-150
+                        cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2
+                        ${isPartial
+                          ? 'bg-amber-50 dark:bg-zinc-900 hover:bg-amber-100 dark:hover:bg-amber-950/40 focus:ring-amber-400'
+                          : 'bg-white dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/40 focus:ring-error'
+                        }
+                      `}
+                      aria-label={`Unit ${t.tenementNumber} — ${t.ownerName} — ${due?.status}`}
+                    >
+                      <span className={`text-xl sm:text-xl font-extrabold leading-none group-hover:translate-y-[-10px] transition-transform duration-150 ${isPartial ? 'text-amber-700 dark:text-amber-400' : 'text-error dark:text-red-400'}`}>
+                        {t.tenementNumber}
+                      </span>
+                      {isPartial && (
+                        <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400 uppercase mt-0.5">Partial</span>
+                      )}
+                      <span className="
+                        absolute bottom-0 left-0 right-0 bg-black/70 text-white 
+                        text-[12px] font-bold text-center py-0.5
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-150 truncate px-1 pointer-events-none
+                      ">
+                        {t.ownerName.split(' ')[0]}
+                      </span>
+                    </button>
+
+                    {/* 1-Click WhatsApp Quick Reminder Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openWhatsAppReminder({
+                          phone: t.contact,
+                          unitNumber: t.tenementNumber,
+                          ownerName: t.ownerName,
+                          month: selectedMonth,
+                          year: selectedYear,
+                          amount: due?.amount || maintenanceAmount,
+                          isPartial,
+                          amountPaid: due?.amountPaid || 0,
+                        });
+                      }}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md transition-all active:scale-90 z-10 hover:brightness-110"
+                      title={`Send WhatsApp reminder to Unit ${t.tenementNumber}`}
+                      aria-label={`Send WhatsApp reminder to Unit ${t.tenementNumber}`}
+                    >
+                      <img src="/whatsapp.svg" alt="WhatsApp" className="w-5 h-5 drop-shadow-sm" />
+                    </button>
+                  </div>
                 );
               })}
             </div>

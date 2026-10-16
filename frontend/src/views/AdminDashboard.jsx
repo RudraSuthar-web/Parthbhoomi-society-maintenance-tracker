@@ -18,7 +18,7 @@ import SOCIETY_CONFIG          from '../config/societyConfig';
 import AddExpenseModal         from '../components/admin/AddExpenseModal';
 import ProfileTab              from '../components/resident/ProfileTab';
 
-export default function AdminDashboard({ currentTab }) {
+export default function AdminDashboard({ currentTab, setCurrentTab }) {
   const {
     tenements, notices, addInstallment, revertPayment,
     addNotice, deleteNotice, registerTenement, deleteTenement,

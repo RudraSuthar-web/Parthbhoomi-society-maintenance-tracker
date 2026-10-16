@@ -7,7 +7,10 @@ import {
   revertPaymentBackend, updateProfileBackend, deleteTenementBackend, loginBackend,
   changePasswordBackend,
   getExpenses, createExpenseBackend, deleteExpenseBackend,
+  getNotifications, createNotificationBackend, markNotificationReadBackend,
+  markAllNotificationsReadBackend, clearAllNotificationsBackend,
 } from '../services/apiService';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import SOCIETY_CONFIG from '../config/societyConfig';
 
 export const AppContext = createContext();
@@ -143,6 +146,92 @@ export const AppProvider = ({ children }) => {
       if (fetched && fetched.length > 0) setNotices(fetched);
     });
   }, []);
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  const [notifications, setNotifications] = useState([]);
+
+  const refreshNotifications = useCallback(() => {
+    if (!user) return;
+    getNotifications(user.username, user.role).then(data => {
+      if (Array.isArray(data)) setNotifications(data);
+    });
+  }, [user]);
+
+  useEffect(() => {
+    refreshNotifications();
+  }, [refreshNotifications]);
+
+  // Supabase Realtime subscription for live notifications
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !user) return;
+
+    const channel = supabase
+      .channel('public:notifications')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const n = payload.new;
+            // Check if relevant to this user
+            if (user.role === 'admin' || !n.tenement_number || n.tenement_number === 'ALL' || n.tenement_number === user.username) {
+              setNotifications(prev => [
+                {
+                  id: n.id,
+                  title: n.title,
+                  message: n.message,
+                  type: n.type || 'info',
+                  tenementNumber: n.tenement_number,
+                  isRead: Boolean(n.is_read),
+                  createdAt: n.created_at,
+                  linkTab: n.link_tab || null,
+                },
+                ...prev.filter(item => item.id !== n.id)
+              ]);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            setNotifications(prev =>
+              prev.map(item => item.id === payload.new.id ? { ...item, isRead: Boolean(payload.new.is_read) } : item)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setNotifications(prev => prev.filter(item => item.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const addNotification = async ({ title, message, type = 'info', tenementNumber = null, linkTab = null }) => {
+    const notif = await createNotificationBackend({ title, message, type, tenementNumber, linkTab });
+    if (notif) {
+      if (!user || user.role === 'admin' || !tenementNumber || tenementNumber === 'ALL' || tenementNumber === user?.username) {
+        setNotifications(prev => [notif, ...prev.filter(n => n.id !== notif.id)]);
+      }
+    }
+  };
+
+  const markNotificationRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    markNotificationReadBackend(id);
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    if (user) {
+      markAllNotificationsReadBackend(user.username, user.role);
+    }
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    if (user) {
+      clearAllNotificationsBackend(user.username, user.role);
+    }
+  };
 
   // ── Authentication ─────────────────────────────────────────────────────────
   const login = async (username, password) => {
@@ -340,6 +429,15 @@ export const AppProvider = ({ children }) => {
             maintenanceAmount
           );
 
+          // Phase 1 Notification trigger
+          addNotification({
+            title: isFullyPaid ? `Payment Received: Unit ${tenementNumber}` : `Partial Payment: Unit ${tenementNumber}`,
+            message: `Recorded payment of ₹${(installmentData.amount || 0).toLocaleString('en-IN')} for ${monthName} ${customYear}. (${newStatus})`,
+            type: 'payment',
+            tenementNumber,
+            linkTab: 'ledger',
+          });
+
           return {
             ...due,
             installments: newInstallments,
@@ -374,6 +472,14 @@ export const AppProvider = ({ children }) => {
           // Backend sync
           revertPaymentBackend(tenementNumber, monthName, customYear, maintenanceAmount);
 
+          addNotification({
+            title: `Payment Reverted: Unit ${tenementNumber}`,
+            message: `Payment entry for ${monthName} ${customYear} has been reset to Unpaid.`,
+            type: 'due',
+            tenementNumber,
+            linkTab: 'ledger',
+          });
+
           const { dateCleared, reference, method, ...rest } = due;
           return {
             ...rest,
@@ -395,7 +501,7 @@ export const AppProvider = ({ children }) => {
       revertPayment(tenementNumber, monthName, customYear);
     } else {
       const today = new Date().toISOString().split('T')[0];
-      const randomRef = 'TXN' + Math.floor(10000 + Math.random() * 90000);
+      const randomRef = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
       addInstallment(
         tenementNumber,
         monthName,
@@ -409,6 +515,14 @@ export const AppProvider = ({ children }) => {
   const addNotice = (title, content) => {
     createNotice(title, content).then(newNotice => {
       setNotices(prevNotices => [newNotice, ...prevNotices]);
+      // Broadcast notice to all residents
+      addNotification({
+        title: `Society Notice: ${title}`,
+        message: content.length > 80 ? content.slice(0, 80) + '…' : content,
+        type: 'notice',
+        tenementNumber: 'ALL',
+        linkTab: 'notices',
+      });
     });
   };
 
@@ -531,6 +645,13 @@ export const AppProvider = ({ children }) => {
         expenses,
         addExpense,
         deleteExpense,
+        notifications,
+        unreadNotificationsCount: notifications.filter(n => !n.isRead).length,
+        addNotification,
+        markNotificationRead,
+        markAllNotificationsRead,
+        clearAllNotifications,
+        refreshNotifications,
         gdriveScriptUrl,
         setGdriveScriptUrl,
         gdriveFolderId,

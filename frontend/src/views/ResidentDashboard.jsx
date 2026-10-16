@@ -182,7 +182,9 @@ export default function ResidentDashboard({ currentTab, setCurrentTab }) {
         />
       )}
 
-      {currentTab === 'notices' && <BulletinsTab notices={notices} />}
+      {currentTab === 'notices' && (
+        <BulletinsTab notices={notices} />
+      )}
 
       {currentTab === 'expenses' && (
         <ExpensesTab

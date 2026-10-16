@@ -10,8 +10,10 @@ import {
   Clock, 
   XCircle, 
   Trash2, 
-  ChevronDown 
+  ChevronDown,
+  MessageCircle 
 } from 'lucide-react';
+import { openWhatsAppReminder } from '../utils/whatsappUtils';
 
 /**
  * TenementModal — Full popup card for a single tenement
@@ -106,13 +108,36 @@ export default function TenementModal({
                 <h2 className="text-base sm:text-xl font-extrabold leading-tight text-white break-words">
                   {tenement.ownerName}
                 </h2>
-                <a
-                  href={`tel:${tenement.contact}`}
-                  className="inline-flex items-center gap-1.5 mt-1 text-xs font-semibold text-white/80 hover:text-white transition-colors"
-                >
-                  <Phone className="w-3 h-3 text-white/80 flex-shrink-0" />
-                  <span>{tenement.contact}</span>
-                </a>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <a
+                    href={`tel:${tenement.contact}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
+                    <span>{tenement.contact}</span>
+                  </a>
+
+                  {user?.role === 'admin' && (!isCurrentPaid) && (
+                    <button
+                      type="button"
+                      onClick={() => openWhatsAppReminder({
+                        phone: tenement.contact,
+                        unitNumber: tenement.tenementNumber,
+                        ownerName: tenement.ownerName,
+                        month: modalMonth,
+                        year: modalYear,
+                        amount: currentDue?.amount || maintenanceAmount,
+                        isPartial: isCurrentPartial,
+                        amountPaid: currentDue?.amountPaid || 0,
+                      })}
+                      className="inline-flex items-center border-2 border-blue-500 hover:border-blue-600 gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 hover:scale-105 text-white text-[11px] font-bold shadow-sm transition-all active:scale-95"
+                      title="Send WhatsApp Reminder"
+                    >
+                      <img src="/whatsapp.svg" alt="WhatsApp" className="w-3.5 h-3.5" />
+                      <span>Send Reminder</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Current month status — uses modalMonth + modalYear */}

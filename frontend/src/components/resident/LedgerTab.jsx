@@ -44,7 +44,7 @@ export default function LedgerTab({
     <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-soft animate-fadeIn">
       <div ref={sentinelRef} className="h-0 w-0" />
       <div
-        className={`sticky top-[65px] md:top-0 z-20 transition-all duration-300 ${
+        className={`sticky top-[70px] md:top-0 z-20 transition-all duration-300 ${
           isStuck
             ? ' -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8'
             : 'mx-0 mt-0'
